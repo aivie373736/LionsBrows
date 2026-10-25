@@ -14,6 +14,8 @@ const ICONS = [
   'zap', 'command', 'sparkles', 'pause', 'play', 'file', 'arrow-up-right', 'corner-down-left', 'arrow-left-right',
   'moon-star', 'circle-check', 'circle-x', 'upload', 'info', 'monitor', 'palette', 'keyboard', 'zoom-in',
   'menu', 'image', 'film', 'check', 'sliders-horizontal', 'pencil', 'list', 'paintbrush',
+  'book-open', 'import', 'refresh-cw', 'circle-arrow-up', 'languages',
+  'minus', 'sun-moon',
 ];
 
 const lucideDir = path.join(path.dirname(require.resolve('lucide-static/package.json')), 'icons');

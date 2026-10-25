@@ -32,6 +32,14 @@ The search engine logos in `src/shared/engines.js` come from [Simple Icons](http
 
 Ad and tracker blocking uses [@ghostery/adblocker](https://github.com/ghostery/adblocker), licensed under MPL-2.0.
 
+## Mozilla Readability
+
+Reader view uses [Readability](https://github.com/mozilla/readability) by Mozilla, licensed under Apache-2.0.
+
+## electron-updater
+
+Automatic updates use [electron-updater](https://github.com/electron-userland/electron-builder) (MIT).
+
 ## Electron and Chromium
 
 LionsBrows is built on [Electron](https://www.electronjs.org) (MIT) and [Chromium](https://www.chromium.org) (BSD-style). Their license files ship with every build.

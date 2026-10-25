@@ -82,6 +82,9 @@ async function serveRange(file, request, type) {
 }
 
 async function handler(request) {
+  if (request.url === 'lions://assets/strings.js') {
+    return new Response(require('./i18n').script(), { headers: { 'content-type': MIME['.js'], 'cache-control': 'no-cache', 'access-control-allow-origin': '*' } });
+  }
   const file = resolve(request.url);
   if (!file) return notFound();
   const host = new URL(request.url).hostname;

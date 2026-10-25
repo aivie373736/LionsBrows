@@ -63,7 +63,7 @@ const BANGS = {
 let custom = null;
 
 function setCustomEngine(name, url) {
-  custom = isValidTemplate(url) ? { name: (name || '').trim() || 'Custom search', search: url.trim(), suggest: null } : null;
+  custom = isValidTemplate(url) ? { name: (name || '').trim() || require('./i18n').tr('Custom search'), search: url.trim(), suggest: null } : null;
 }
 
 function isValidTemplate(url) {

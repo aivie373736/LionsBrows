@@ -23,6 +23,20 @@ function add({ url, title = '', favicon = '', folder = '' }) {
   return item;
 }
 
+function addMany(list) {
+  const known = new Set(all().map((b) => b.url));
+  const fresh = [];
+  for (const b of list) {
+    if (!b.url || known.has(b.url)) continue;
+    known.add(b.url);
+    fresh.push({ id: crypto.randomUUID(), url: b.url, title: b.title || b.url, favicon: '', folder: b.folder || '', created: b.created || Date.now() });
+  }
+  if (!fresh.length) return 0;
+  ctx.bookmarks.update((d) => d.items.push(...fresh));
+  changed();
+  return fresh.length;
+}
+
 function remove(idOrUrl) {
   ctx.bookmarks.update((d) => (d.items = d.items.filter((b) => b.id !== idOrUrl && b.url !== idOrUrl)));
   changed();
@@ -76,4 +90,4 @@ function decode(s) {
   return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 }
 
-module.exports = { all, has, add, remove, update, toggle, search, importHtml };
+module.exports = { all, has, add, addMany, remove, update, toggle, search, importHtml };

@@ -4,6 +4,8 @@ const path = require('node:path');
 const { WebContentsView, dialog, nativeTheme } = require('electron');
 const { ctx } = require('./context');
 const sessions = require('./sessions');
+const reader = require('./reader');
+const { tr } = require('./i18n');
 
 const PAGE_PRELOAD = path.join(__dirname, '..', 'preload', 'page.js');
 const NEWTAB = 'lions://newtab/';
@@ -28,6 +30,7 @@ class Tab {
     this.crashed = false;
     this.blocked = 0;
     this.errorUrl = null;
+    this.readerable = false;
     this.typed = false;
     this.lastActive = Date.now();
     this.savedHistory = null;
@@ -46,7 +49,7 @@ class Tab {
   }
 
   get displayUrl() {
-    return this.errorUrl || this.url;
+    return this.errorUrl || reader.sourceUrl(this.url) || this.url;
   }
 
   get isInternal() {
@@ -122,7 +125,9 @@ class Tab {
       if (!event.isMainFrame || event.isSameDocument) return;
       this.#syncBackground(event.url);
       this.blocked = 0;
+      this.readerable = false;
     });
+    wc.on('did-finish-load', () => this.#checkReader(wc));
     wc.on('did-navigate', (_e, url) => {
       this.url = url;
       this.crashed = false;
@@ -135,6 +140,7 @@ class Tab {
       this.url = url;
       this.#record(url);
       changed();
+      setTimeout(() => this.#checkReader(wc), 1000);
     });
     wc.on('page-title-updated', (_e, title) => {
       this.title = title;
@@ -175,17 +181,25 @@ class Tab {
     wc.on('will-prevent-unload', (event) => {
       const choice = dialog.showMessageBoxSync(this.owner.win, {
         type: 'question',
-        buttons: ['Leave', 'Stay'],
+        buttons: [tr('Leave'), tr('Stay')],
         defaultId: 0,
         cancelId: 1,
-        message: 'Leave this site?',
-        detail: 'Changes you made may not be saved.',
+        message: tr('Leave this site?'),
+        detail: tr('Changes you made may not be saved.'),
       });
       if (choice === 0) event.preventDefault();
     });
     wc.on('destroyed', () => {
       if (!this.closing && this.view && this.view.webContents === wc) this.owner.tabDestroyed(this);
     });
+  }
+
+  async #checkReader(wc) {
+    if (wc !== this.wc) return;
+    const readerable = await reader.check(this);
+    if (wc !== this.wc || readerable === this.readerable) return;
+    this.readerable = readerable;
+    this.owner.tabChanged(this);
   }
 
   #record(url) {
@@ -298,11 +312,13 @@ class Tab {
       canGoBack: wc ? wc.navigationHistory.canGoBack() : false,
       canGoForward: wc ? wc.navigationHistory.canGoForward() : false,
       blocked: this.blocked,
+      readerable: this.readerable,
+      reader: Boolean(reader.sourceUrl(this.url)),
     };
   }
 
   #fallbackTitle() {
-    if (this.url.startsWith(NEWTAB)) return 'New Tab';
+    if (this.url.startsWith(NEWTAB)) return tr('New Tab');
     try {
       return new URL(this.displayUrl).host || this.displayUrl;
     } catch {

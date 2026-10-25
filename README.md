@@ -4,7 +4,7 @@
 
 <h1 align="center">LionsBrows</h1>
 
-<p align="center">A fast, private web browser built on Chromium that runs well on low-memory devices.</p>
+<p align="center">Everything you need in a browser, nothing you don't. A fast, private, minimal browser built on Chromium that runs well on low-memory devices.</p>
 
 <p align="center">
   <img src="docs/screenshots/new-tab.png" width="860" alt="LionsBrows new tab page">
@@ -20,6 +20,11 @@
 - **Personalization:** use your own video, image or a solid color as the new tab background. You can also choose the accent color and toolbar color, and switch between light and dark mode.
 - **Made for low-memory devices:** Memory saver puts inactive tabs to sleep and limits how many background tabs stay active. Low-memory mode uses fewer processes and smaller caches. Both turn on automatically on devices with 4 GB of RAM or less, and when the system runs low on memory, background tabs are suspended immediately. Settings shows memory usage per tab.
 - **Tracking protection:** built-in ad and tracker blocking with per-site exceptions, automatic HTTPS upgrades, Global Privacy Control and private windows.
+- **Minimal by default:** the toolbar only shows back, forward, reload, the address bar and the menu. Downloads, split view and notes appear when you need them, and you can add buttons back with a right-click on the toolbar.
+- **Reader view:** one click turns cluttered articles into clean text, with font, size and light, sepia or dark themes.
+- **Import from other browsers:** bring over bookmarks and history from Chrome, Edge, Brave, Vivaldi, Opera and Firefox.
+- **Automatic updates:** new versions download in the background and install on restart.
+- **English and German:** the language follows your system and can be changed in Settings.
 - **Everyday tools:** history, bookmarks with import and export, a download manager, find in page, zoom, full-page screenshots, a PDF viewer, spell check, session restore and a notes panel.
 
 <p align="center">
@@ -29,6 +34,7 @@
   <img src="docs/screenshots/search-engines.png" width="430" alt="Search engine picker">
   <img src="docs/screenshots/vertical-tabs.png" width="430" alt="Vertical tabs with a custom toolbar color">
   <img src="docs/screenshots/history.png" width="430" alt="History">
+  <img src="docs/screenshots/reader.png" width="430" alt="Reader view in sepia">
 </p>
 
 ## Download
@@ -58,6 +64,7 @@ The builds are not code-signed yet. On Windows, SmartScreen may show a warning (
 | Reopen closed tab | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> | <kbd>⌘</kbd><kbd>⇧</kbd><kbd>T</kbd> |
 | Split view | <kbd>Ctrl</kbd>+<kbd>\\</kbd> | <kbd>⌘</kbd><kbd>\\</kbd> |
 | Find in page | <kbd>Ctrl</kbd>+<kbd>F</kbd> | <kbd>⌘</kbd><kbd>F</kbd> |
+| Reader view | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd> or <kbd>F9</kbd> | <kbd>⌘</kbd><kbd>⌥</kbd><kbd>R</kbd> |
 | Private window | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> | <kbd>⌘</kbd><kbd>⇧</kbd><kbd>N</kbd> |
 
 All shortcuts are listed under *Settings → Keyboard shortcuts*.
@@ -98,6 +105,8 @@ LionsBrows runs on [Electron](https://www.electronjs.org). Every page is sandbox
 
 - Chrome Web Store extensions cannot be installed directly. Unpacked extensions can be loaded from *Settings → Extensions* (experimental).
 - There is no built-in password manager or sync.
+- Streaming services that need Widevine DRM (Netflix, Spotify, Disney+) don't play yet.
+- Automatic updates need the GitHub releases to be public.
 
 ## License
 

@@ -14,7 +14,7 @@ const more = document.getElementById('more');
 const search = libraryShell('history', 'Search history');
 
 function item(v) {
-  const remove = el('button', { class: 'icon-btn', title: 'Remove from history', 'aria-label': 'Remove from history', html: icon('x', 16) });
+  const remove = el('button', { class: 'icon-btn', title: tr('Remove from history'), 'aria-label': tr('Remove from history'), html: icon('x', 16) });
   const row = el(
     'div',
     { class: 'list-item' },
@@ -56,7 +56,7 @@ async function load(reset = false) {
     lastUrl = v.url;
     dayCard.append(item(v));
   }
-  if (!list.children.length) list.append(emptyPanel('history', query ? `No history matches “${query}”.` : 'Pages you visit will appear here.'));
+  if (!list.children.length) list.append(emptyPanel('history', query ? tr('No history matches “{query}”.', { query }) : tr('Pages you visit will appear here.')));
   loading = false;
 }
 
@@ -70,18 +70,18 @@ search.addEventListener(
 
 const range = el(
   'select',
-  { title: 'Clear history', 'aria-label': 'Clear history' },
-  el('option', { value: '' }, 'Clear history…'),
-  el('option', { value: 'hour' }, 'Last hour'),
-  el('option', { value: 'day' }, 'Last 24 hours'),
-  el('option', { value: 'week' }, 'Last 7 days'),
-  el('option', { value: 'all' }, 'All time'),
+  { title: tr('Clear history'), 'aria-label': tr('Clear history') },
+  el('option', { value: '' }, tr('Clear history…')),
+  el('option', { value: 'hour' }, tr('Last hour')),
+  el('option', { value: 'day' }, tr('Last 24 hours')),
+  el('option', { value: 'week' }, tr('Last 7 days')),
+  el('option', { value: 'all' }, tr('All time')),
 );
 range.addEventListener('change', async () => {
   if (!range.value) return;
   await api.call('historyClear', range.value);
   range.value = '';
-  toast('History cleared');
+  toast(tr('History cleared'));
   load(true);
 });
 document.getElementById('actions').append(range);

@@ -2,6 +2,7 @@
 
 const crypto = require('node:crypto');
 const { ctx, WORKSPACE_COLORS, HEX } = require('./context');
+const { tr } = require('./i18n');
 
 const COLOR_NAMES = { '#7542e5': 'Purple', '#0061e0': 'Blue', '#1f8a3e': 'Green', '#e8811a': 'Orange', '#008787': 'Teal', '#d7264c': 'Red', '#5b5b66': 'Graphite', '#c50093': 'Pink' };
 
@@ -13,7 +14,7 @@ function create(name) {
   const used = new Set(ctx.workspaces().map((w) => w.color));
   const ws = {
     id: crypto.randomUUID().slice(0, 8),
-    name: (name || '').trim().slice(0, 40) || `Workspace ${ctx.workspaces().length + 1}`,
+    name: (name || '').trim().slice(0, 40) || tr('Workspace {n}', { n: ctx.workspaces().length + 1 }),
     color: WORKSPACE_COLORS.find((c) => !used.has(c)) || WORKSPACE_COLORS[ctx.workspaces().length % WORKSPACE_COLORS.length],
     isolated: false,
   };

@@ -25,7 +25,8 @@ async function set(key, value) {
 }
 
 function row(label, sub, control) {
-  return el('div', { class: 'row' }, el('div', { class: 'label' }, el('div', {}, label), sub ? el('div', { class: 'sub' }, sub) : null), control);
+  const text = (v) => (typeof v === 'string' ? tr(v) : v);
+  return el('div', { class: 'row' }, el('div', { class: 'label' }, el('div', {}, text(label)), sub ? el('div', { class: 'sub' }, text(sub)) : null), control);
 }
 
 function toggle(key, onChange) {
@@ -39,7 +40,7 @@ function toggle(key, onChange) {
 }
 
 function select(key, options, transform = (v) => v) {
-  const s = el('select', {}, ...options.map(([value, label]) => el('option', { value: String(value) }, label)));
+  const s = el('select', {}, ...options.map(([value, label]) => el('option', { value: String(value) }, tr(label))));
   s.value = String(S.settings[key]);
   s.addEventListener('change', () => set(key, transform(s.value)));
   return s;
@@ -48,7 +49,7 @@ function select(key, options, transform = (v) => v) {
 function segmented(key, options, onChange) {
   const box = el('div', { class: 'seg' });
   for (const [value, label] of options) {
-    const b = el('button', { class: S.settings[key] === value ? 'on' : '' }, label);
+    const b = el('button', { class: S.settings[key] === value ? 'on' : '' }, tr(label));
     b.onclick = async () => {
       await set(key, value);
       box.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
@@ -70,12 +71,12 @@ function titleWithIcon(tag, className, text, iconName, size) {
 }
 
 function panel(title, iconName, ...items) {
-  return el('div', { class: 'panel' }, title ? titleWithIcon('h3', 'panel-title', title, iconName, 22) : null, ...items);
+  return el('div', { class: 'panel' }, title ? titleWithIcon('h3', 'panel-title', tr(title), iconName, 22) : null, ...items);
 }
 
 function section(id, sub, ...items) {
   const [, title, iconName] = SECTIONS.find(([key]) => key === id);
-  const box = el('section', { class: 'settings-section', id }, titleWithIcon('h2', 'section-title', title, iconName, 26), sub ? el('p', { class: 'section-sub' }, sub) : null);
+  const box = el('section', { class: 'settings-section', id }, titleWithIcon('h2', 'section-title', tr(title), iconName, 26), sub ? el('p', { class: 'section-sub' }, tr(sub)) : null);
   let loose = null;
   for (const item of items.filter(Boolean)) {
     if (item.classList.contains('panel')) {
@@ -92,17 +93,69 @@ function section(id, sub, ...items) {
   return box;
 }
 
+function languagePanel() {
+  const choice = el('select', {}, el('option', { value: 'auto' }, tr('System default')), el('option', { value: 'en' }, 'English'), el('option', { value: 'de' }, 'Deutsch'));
+  choice.value = S.settings.language;
+  const restart = el('button', { class: 'button primary' }, tr('Restart now'));
+  restart.onclick = () => api.call('relaunch');
+  const note = el('div', { class: 'row restart-row' }, el('div', { class: 'label' }, el('div', {}, tr('Restart to apply')), el('div', { class: 'sub' }, tr('The new language is used after LionsBrows restarts.'))), restart);
+  note.hidden = true;
+  const initial = S.settings.language;
+  choice.addEventListener('change', async () => {
+    await set('language', choice.value);
+    note.hidden = choice.value === initial;
+  });
+  return panel('Language', 'languages', card(row('Language', 'Used for menus, settings and built-in pages.', choice), note));
+}
+
+async function importPanel() {
+  const found = await api.call('importSources');
+  if (!found.length) {
+    return panel('Import browser data', 'import', card(row('No other browsers found', 'Bookmarks can also be imported from an HTML file on the Bookmarks page.', el('a', { class: 'button', href: 'lions://bookmarks/' }, tr('Bookmarks')))));
+  }
+  const source = el('select', {}, ...found.map((s) => el('option', { value: s.id }, s.label)));
+  const marks = el('input', { type: 'checkbox', checked: true });
+  const history = el('input', { type: 'checkbox', checked: true });
+  const go = el('button', { class: 'button primary' }, tr('Import'));
+  const sync = () => (go.disabled = !marks.checked && !history.checked);
+  marks.onchange = history.onchange = sync;
+  go.onclick = async () => {
+    go.disabled = true;
+    go.textContent = tr('Importing…');
+    try {
+      const r = await api.call('importRun', source.value, { bookmarks: marks.checked, history: history.checked });
+      const b = r.bookmarks.toLocaleString(LOCALE);
+      const h = r.history.toLocaleString(LOCALE);
+      if (marks.checked && history.checked) toast(tr('Imported {b} bookmarks and {h} history entries from {browser}', { b, h, browser: r.browser }));
+      else if (marks.checked) toast(tr('Imported {b} bookmarks from {browser}', { b, browser: r.browser }));
+      else toast(tr('Imported {h} history entries from {browser}', { h, browser: r.browser }));
+    } catch (err) {
+      toast(String(err.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
+    }
+    go.textContent = tr('Import');
+    sync();
+  };
+  return panel(
+    'Import browser data',
+    'import',
+    card(
+      row('Import from', 'Bring over bookmarks and the last six months of history.', source),
+      row('What to import', null, el('div', { class: 'inline' }, el('label', { class: 'check' }, marks, tr('Bookmarks')), el('label', { class: 'check' }, history, tr('History')), go)),
+    ),
+  );
+}
+
 async function general() {
   const about = await api.call('about');
-  const defaultBtn = el('button', { class: 'button' }, about.isDefault ? 'LionsBrows is your default browser' : 'Make default');
+  const defaultBtn = el('button', { class: 'button' }, about.isDefault ? tr('LionsBrows is your default browser') : tr('Make default'));
   defaultBtn.disabled = about.isDefault;
   defaultBtn.onclick = async () => {
     const result = await api.call('makeDefaultBrowser');
-    if (result === 'settings') toast('Choose LionsBrows under “Web browser” in Windows Settings');
+    if (result === 'settings') toast(tr('Choose LionsBrows under “Web browser” in Windows Settings'));
     else if (result === 'ok') {
-      defaultBtn.textContent = 'LionsBrows is your default browser';
+      defaultBtn.textContent = tr('LionsBrows is your default browser');
       defaultBtn.disabled = true;
-    } else toast('Your system did not allow the change');
+    } else toast(tr('Your system did not allow the change'));
   };
   return section(
     'general',
@@ -113,6 +166,8 @@ async function general() {
       card(row('When LionsBrows starts', null, select('startup', [['restore', 'Continue where you left off'], ['newtab', 'Open a new tab']]))),
     ),
     panel('Default browser', 'globe', card(row('Open links from other apps in LionsBrows', null, defaultBtn))),
+    languagePanel(),
+    await importPanel(),
   );
 }
 
@@ -126,14 +181,14 @@ function swatchRow(current, onPick) {
   const box = el('div', { class: 'swatches' });
   const mark = (target) => box.querySelectorAll('.swatch').forEach((x) => x.classList.toggle('on', x === target));
   for (const [name, color] of Object.entries(S.accents)) {
-    const b = el('button', { class: `swatch${current.toLowerCase() === color ? ' on' : ''}`, title: name[0].toUpperCase() + name.slice(1), 'aria-label': name, style: `background:${color}` });
+    const b = el('button', { class: `swatch${current.toLowerCase() === color ? ' on' : ''}`, title: tr(name[0].toUpperCase() + name.slice(1)), 'aria-label': tr(name[0].toUpperCase() + name.slice(1)), style: `background:${color}` });
     b.onclick = async () => {
       await onPick(color);
       mark(b);
     };
     box.append(b);
   }
-  const custom = el('label', { class: `swatch custom${Object.values(S.accents).includes(current.toLowerCase()) ? '' : ' on'}`, title: 'Custom color', html: icon('plus', 14) });
+  const custom = el('label', { class: `swatch custom${Object.values(S.accents).includes(current.toLowerCase()) ? '' : ' on'}`, title: tr('Custom color'), html: icon('plus', 14) });
   const input = el('input', { type: 'color', value: current });
   input.addEventListener('input', () => applyAccent(input.value));
   input.addEventListener('change', async () => {
@@ -154,7 +209,7 @@ function appearance() {
     framePicker.disabled = frameAuto.checked;
     await set('frameColor', frameAuto.checked ? '' : framePicker.value);
   });
-  const frameControl = el('div', { class: 'inline' }, el('label', { class: 'check' }, frameAuto, 'Automatic'), framePicker);
+  const frameControl = el('div', { class: 'inline' }, el('label', { class: 'check' }, frameAuto, tr('Automatic')), framePicker);
 
   return section(
     'appearance',
@@ -184,6 +239,15 @@ function appearance() {
         row('Compact sidebar', 'Only show icons when tabs are on the side.', toggle('sidebarCollapsed')),
       ),
     ),
+    panel(
+      'Toolbar',
+      'sliders-horizontal',
+      card(
+        row('Split view button', 'Split view is always available from the menu and with a keyboard shortcut.', toggle('showSplitButton')),
+        row('Notes button', 'Notes are always available from the menu.', toggle('showNotesButton')),
+        row('Downloads button', null, segmented('downloadsButton', [['auto', 'When downloading'], ['always', 'Always']])),
+      ),
+    ),
   );
 }
 
@@ -195,7 +259,7 @@ function newtabSection() {
     preview.style.background = info.type === 'color' ? info.color : '';
     if (info.type === 'image') preview.style.background = `center / cover url("${info.url}")`;
     if (info.type === 'video') preview.append(el('video', { src: info.url, muted: true, autoplay: true, loop: true, playsinline: true }));
-    if (info.type === 'default') preview.append(el('span', {}, 'None'));
+    if (info.type === 'default') preview.append(el('span', {}, tr('None')));
   };
   paintPreview(bg);
 
@@ -217,7 +281,7 @@ function newtabSection() {
   };
 
   for (const [value, label] of [['default', 'None'], ['color', 'Color'], ['image', 'Image…'], ['video', 'Video…']]) {
-    const b = el('button', { class: bg.type === value ? 'on' : '', 'data-value': value }, label);
+    const b = el('button', { class: bg.type === value ? 'on' : '', 'data-value': value }, tr(label));
     b.onclick = async () => {
       if (value === 'image' || value === 'video') return pick(value)();
       await api.call('setSettings', { ntBackground: value });
@@ -243,7 +307,7 @@ function newtabSection() {
   );
   sliders.hidden = !(bg.type === 'image' || bg.type === 'video');
 
-  const name = el('input', { type: 'text', placeholder: 'Your name', maxlength: '40' });
+  const name = el('input', { type: 'text', placeholder: tr('Your name'), maxlength: '40' });
   name.value = S.settings.greetingName;
   name.addEventListener('input', debounce(() => set('greetingName', name.value.trim()), 400));
 
@@ -276,11 +340,11 @@ function newtabSection() {
 async function search() {
   const bangs = await api.call('bangs');
   const engineSelect = select('searchEngine', S.engines.map((e) => [e.id, e.name]));
-  const customName = el('input', { type: 'text', placeholder: 'Name', maxlength: '40' });
+  const customName = el('input', { type: 'text', placeholder: tr('Name'), maxlength: '40' });
   const customUrl = el('input', { type: 'text', placeholder: 'https://example.com/search?q=%s', class: 'wide' });
   customName.value = S.settings.customSearchName;
   customUrl.value = S.settings.customSearchUrl;
-  const save = el('button', { class: 'button primary' }, 'Save');
+  const save = el('button', { class: 'button primary' }, tr('Save'));
   save.onclick = async () => {
     try {
       S.settings = await api.call('setSettings', { customSearchName: customName.value.trim(), customSearchUrl: customUrl.value.trim() });
@@ -290,8 +354,8 @@ async function search() {
       if (S.engines.some((e) => e.id === 'custom')) {
         S.settings = await api.call('setSetting', 'searchEngine', 'custom');
         engineSelect.value = 'custom';
-        toast(`${customName.value.trim() || 'Custom search'} is now your search engine`);
-      } else toast('Custom search engine removed');
+        toast(tr('{name} is now your search engine', { name: customName.value.trim() || tr('Custom search') }));
+      } else toast(tr('Custom search engine removed'));
     } catch (err) {
       toast(errorText(err));
     }
@@ -326,8 +390,8 @@ async function search() {
 async function performance() {
   let report = await api.call('memoryReport');
   const saverSummary = el('div', { class: 'sub' }, report.summary);
-  const restartNote = el('div', { class: 'row restart-row' }, el('div', { class: 'label' }, el('div', {}, 'Restart to apply'), el('div', { class: 'sub' }, 'Low-memory mode changes take effect after a restart.')));
-  const restartBtn = el('button', { class: 'button primary' }, 'Restart now');
+  const restartNote = el('div', { class: 'row restart-row' }, el('div', { class: 'label' }, el('div', {}, tr('Restart to apply')), el('div', { class: 'sub' }, tr('Low-memory mode changes take effect after a restart.'))));
+  const restartBtn = el('button', { class: 'button primary' }, tr('Restart now'));
   restartBtn.onclick = () => api.call('relaunch');
   restartNote.append(restartBtn);
   const updateRestart = () => {
@@ -340,30 +404,30 @@ async function performance() {
   const systemText = el('div', { class: 'sub' });
   const bar = el('div', { class: 'mem-bar' }, el('span'));
   const tabList = el('div', { class: 'mini-list' });
-  const sleepAll = el('button', { class: 'button' }, 'Sleep background tabs');
+  const sleepAll = el('button', { class: 'button' }, tr('Sleep background tabs'));
   sleepAll.onclick = async () => {
     const n = await api.call('memorySleepAll');
-    toast(n ? `${n} tab${n === 1 ? '' : 's'} put to sleep` : 'No background tabs to put to sleep');
+    toast(n ? (n === 1 ? tr('1 tab put to sleep') : tr('{n} tabs put to sleep', { n })) : tr('No background tabs to put to sleep'));
     refresh();
   };
 
   const paint = () => {
     usedValue.textContent = formatBytes(report.total);
     const used = report.system.total - report.system.free;
-    systemText.textContent = `${formatBytes(report.system.free)} free of ${formatBytes(report.system.total)} system memory${report.lowEndModeActive ? ' · Low-memory mode on' : ''}`;
+    systemText.textContent = `${tr('{free} free of {total} system memory', { free: formatBytes(report.system.free), total: formatBytes(report.system.total) })}${report.lowEndModeActive ? ` · ${tr('Low-memory mode on')}` : ''}`;
     bar.firstChild.style.width = `${Math.min(100, Math.round((used / report.system.total) * 100))}%`;
     tabList.replaceChildren(
       ...report.tabs.slice(0, 30).map((t) => {
         const state = t.sleeping
-          ? el('span', { class: 'pill-tag' }, 'Sleeping')
+          ? el('span', { class: 'pill-tag' }, tr('Sleeping'))
           : t.visible
-            ? el('span', { class: 'pill-tag' }, 'Active')
-            : el('button', { class: 'button small', onclick: async () => (await api.call('memorySleepTab', t.id), refresh()) }, 'Sleep');
+            ? el('span', { class: 'pill-tag' }, tr('Active'))
+            : el('button', { class: 'button small', onclick: async () => (await api.call('memorySleepTab', t.id), refresh()) }, tr('Sleep'));
         return el(
           'div',
           { class: 'list-item' },
           faviconEl(t.favicon),
-          el('span', { class: 'host' }, t.isPrivate ? `${t.title} (private)` : t.title),
+          el('span', { class: 'host' }, t.isPrivate ? `${t.title} (${tr('private')})` : t.title),
           el('span', { class: 'mem-size' }, t.sleeping ? '—' : `${formatBytes(t.memory)}${t.shared ? '*' : ''}`),
           state,
         );
@@ -389,7 +453,7 @@ async function performance() {
         el(
           'div',
           { class: 'row' },
-          el('div', { class: 'label' }, el('div', {}, 'Put inactive tabs to sleep'), saverSummary),
+          el('div', { class: 'label' }, el('div', {}, tr('Put inactive tabs to sleep')), saverSummary),
           segmented('memorySaver', [['auto', 'Auto'], ['balanced', 'Balanced'], ['maximum', 'Maximum'], ['off', 'Off']], refresh),
         ),
         row(
@@ -403,8 +467,8 @@ async function performance() {
     panel(
       'Memory usage',
       'monitor',
-      card(el('div', { class: 'row mem-row' }, el('div', { class: 'label' }, usedValue, el('div', { class: 'sub' }, 'used by LionsBrows'), bar, systemText), sleepAll)),
-      el('p', { class: 'group-label' }, 'Tabs (* shares a process with other tabs from the same site)'),
+      card(el('div', { class: 'row mem-row' }, el('div', { class: 'label' }, usedValue, el('div', { class: 'sub' }, tr('used by LionsBrows')), bar, systemText), sleepAll)),
+      el('p', { class: 'group-label' }, tr('Tabs (* shares a process with other tabs from the same site)')),
       card(tabList),
     ),
   );
@@ -416,14 +480,14 @@ function listRow(label, buttonTitle, onRemove, ...extra) {
 
 async function privacy() {
   const info = await api.call('adblockInfo');
-  const since = new Date(info.since).toLocaleDateString();
+  const since = new Date(info.since).toLocaleDateString(LOCALE);
 
-  const refresh = el('button', { class: 'button' }, 'Update lists');
+  const refresh = el('button', { class: 'button' }, tr('Update lists'));
   refresh.onclick = async () => {
     refresh.disabled = true;
-    refresh.textContent = 'Updating…';
+    refresh.textContent = tr('Updating…');
     await api.call('adblockRefresh');
-    refresh.textContent = 'Up to date';
+    refresh.textContent = tr('Up to date');
   };
 
   const allowList = el('div', { class: 'mini-list' });
@@ -432,7 +496,7 @@ async function privacy() {
     if (!list.length) allowList.append(row('No exceptions', 'Turn blocking off for a site with the shield icon in the address bar.', null));
     for (const host of list) {
       allowList.append(
-        listRow(host, 'Remove exception', async () => {
+        listRow(host, tr('Remove exception'), async () => {
           await api.call('adblockAllowRemove', host);
           renderAllow((await api.call('adblockInfo')).allowlist);
         }),
@@ -448,11 +512,11 @@ async function privacy() {
     const origins = Object.keys(all);
     if (!origins.length) perms.append(row('No saved permissions', 'Sites ask before using your camera, microphone, location or notifications.', null));
     for (const origin of origins) {
-      const tags = Object.entries(all[origin]).map(([perm, v]) => el('span', { class: `pill-tag ${v}` }, `${perm.replace('media:', '').replace('+', ' & ')}: ${v === 'allow' ? 'allowed' : 'blocked'}`));
+      const tags = Object.entries(all[origin]).map(([perm, v]) => el('span', { class: `pill-tag ${v}` }, `${perm.replace('media:', '').replace('+', ' & ')}: ${v === 'allow' ? tr('allowed') : tr('blocked')}`));
       perms.append(
         listRow(
           origin.replace(/^https?:\/\//, ''),
-          'Reset permissions',
+          tr('Reset permissions'),
           async () => {
             await api.call('permissionsReset', origin);
             renderPerms();
@@ -470,16 +534,16 @@ async function privacy() {
     cache: el('input', { type: 'checkbox', checked: true }),
     downloads: el('input', { type: 'checkbox' }),
   };
-  const range = el('select', {}, el('option', { value: 'hour' }, 'Last hour'), el('option', { value: 'day' }, 'Last 24 hours'), el('option', { value: 'week' }, 'Last 7 days'), el('option', { value: 'month' }, 'Last 4 weeks'), el('option', { value: 'all' }, 'All time'));
+  const range = el('select', {}, el('option', { value: 'hour' }, tr('Last hour')), el('option', { value: 'day' }, tr('Last 24 hours')), el('option', { value: 'week' }, tr('Last 7 days')), el('option', { value: 'month' }, tr('Last 4 weeks')), el('option', { value: 'all' }, tr('All time')));
   range.value = 'day';
-  const clearBtn = el('button', { class: 'button danger' }, 'Clear data');
+  const clearBtn = el('button', { class: 'button danger' }, tr('Clear data'));
   clearBtn.onclick = async () => {
     const opts = Object.fromEntries(Object.entries(checks).map(([k, c]) => [k, c.checked]));
-    if (!Object.values(opts).some(Boolean)) return toast('Select at least one item');
+    if (!Object.values(opts).some(Boolean)) return toast(tr('Select at least one item'));
     clearBtn.disabled = true;
     await api.call('clearData', { ...opts, range: range.value });
     clearBtn.disabled = false;
-    toast('Browsing data cleared');
+    toast(tr('Browsing data cleared'));
   };
 
   return section(
@@ -489,10 +553,10 @@ async function privacy() {
       'Tracking protection',
       'shield',
       card(
-        row('Block ads and trackers', `${info.blocked.toLocaleString()} blocked since ${since}.`, toggle('adblock')),
+        row('Block ads and trackers', tr('{n} blocked since {date}.', { n: info.blocked.toLocaleString(LOCALE), date: since }), toggle('adblock')),
         row('Filter lists', 'EasyList, EasyPrivacy and others. Updated automatically.', refresh),
       ),
-      el('p', { class: 'group-label' }, 'Exceptions'),
+      el('p', { class: 'group-label' }, tr('Exceptions')),
       card(allowList),
     ),
     panel(
@@ -511,12 +575,12 @@ async function privacy() {
         el(
           'div',
           { class: 'checks' },
-          el('label', {}, checks.history, 'Browsing history'),
-          el('label', {}, checks.cookies, 'Cookies and site data'),
-          el('label', {}, checks.cache, 'Cached images and files'),
-          el('label', {}, checks.downloads, 'Download history'),
+          el('label', {}, checks.history, tr('Browsing history')),
+          el('label', {}, checks.cookies, tr('Cookies and site data')),
+          el('label', {}, checks.cache, tr('Cached images and files')),
+          el('label', {}, checks.downloads, tr('Download history')),
         ),
-        el('div', { class: 'row' }, el('div', { class: 'label' }, 'Time range'), range, clearBtn),
+        el('div', { class: 'row' }, el('div', { class: 'label' }, tr('Time range')), range, clearBtn),
       ),
     ),
   );
@@ -524,7 +588,7 @@ async function privacy() {
 
 function downloads() {
   const path = el('div', { class: 'path' }, S.downloadsDir);
-  const change = el('button', { class: 'button' }, 'Change');
+  const change = el('button', { class: 'button' }, tr('Change'));
   change.onclick = async () => (path.textContent = await api.call('chooseDownloadsFolder'));
   return section('downloads', null, panel('Files', 'folder-open', card(row('Location', path, change), row('Ask where to save each file', null, toggle('askWhereToSave')))));
 }
@@ -534,15 +598,15 @@ async function extensions() {
   const render = (items) => {
     list.textContent = '';
     if (!items.length) list.append(row('No extensions installed', null, null));
-    for (const x of items) list.append(listRow(`${x.name} ${x.version}${x.missing ? ' (folder missing)' : ''}`, 'Remove', async () => render(await api.call('extensionsRemove', x.dir))));
+    for (const x of items) list.append(listRow(`${x.name} ${x.version}${x.missing ? ` (${tr('folder missing')})` : ''}`, tr('Remove'), async () => render(await api.call('extensionsRemove', x.dir))));
   };
   render(await api.call('extensionsList'));
-  const add = el('button', { class: 'button' }, 'Load unpacked');
+  const add = el('button', { class: 'button' }, tr('Load unpacked'));
   add.onclick = async () => {
     try {
       render(await api.call('extensionsAdd'));
     } catch (err) {
-      toast(`Couldn’t load extension: ${errorText(err)}`);
+      toast(tr('Couldn’t load extension: {error}', { error: errorText(err) }));
     }
   };
   return section(
@@ -559,9 +623,35 @@ async function shortcuts() {
   return section('shortcuts', 'Press Ctrl+K (⌘K on Mac) and type “>” to find any command.', card(table));
 }
 
+const UPDATE_TEXT = {
+  idle: 'Updates are checked automatically.',
+  checking: 'Checking for updates…',
+  current: 'LionsBrows is up to date.',
+  error: 'Couldn’t check for updates. Try again later.',
+  unsupported: 'Updates are only available in installed versions.',
+};
+
+function updateRow() {
+  const sub = el('div', { class: 'sub' });
+  const action = el('button', { class: 'button' });
+  const paint = (u) => {
+    if (u.status === 'downloading') sub.textContent = tr('Downloading LionsBrows {version}… {progress}%', u);
+    else if (u.status === 'ready') sub.textContent = tr('LionsBrows {version} is ready to install.', u);
+    else if (u.status === 'available') sub.textContent = tr('LionsBrows {version} is available.', u);
+    else sub.textContent = tr(UPDATE_TEXT[u.status] || UPDATE_TEXT.idle);
+    action.textContent = u.status === 'ready' ? tr('Restart to update') : u.status === 'available' ? tr('Download') : tr('Check for updates');
+    action.classList.toggle('primary', u.status === 'ready' || u.status === 'available');
+    action.disabled = u.status === 'checking' || u.status === 'downloading' || u.status === 'unsupported';
+    action.onclick = () => (u.status === 'ready' || u.status === 'available' ? api.call('updateInstall') : api.call('updateCheck'));
+  };
+  api.call('updateState').then(paint);
+  api.on(async (name) => name === 'update-changed' && paint(await api.call('updateState')));
+  return el('div', { class: 'row' }, el('div', { class: 'label' }, el('div', {}, tr('Updates')), sub), action);
+}
+
 async function about() {
   const a = await api.call('about');
-  const folder = el('button', { class: 'button' }, 'Open profile folder');
+  const folder = el('button', { class: 'button' }, tr('Open profile folder'));
   folder.onclick = () => api.call('openDataFolder');
   return section(
     'about',
@@ -573,7 +663,9 @@ async function about() {
         el('img', { src: 'lions://assets/logo.svg', alt: '' }),
         el('div', {}, el('h3', {}, `LionsBrows ${a.version}`), el('div', { class: 'versions' }, `Chromium ${a.chrome}`, el('br'), `Electron ${a.electron} · Node ${a.node}`, el('br'), a.platform)),
       ),
-      row('Source code', 'MIT license', el('a', { href: 'https://github.com/aivie373736/LionsBrows', class: 'button' }, 'View on GitHub')),
+      updateRow(),
+      row('Install updates automatically', 'Updates download in the background and install when you restart.', toggle('autoUpdate')),
+      row('Source code', 'MIT license', el('a', { href: 'https://github.com/aivie373736/LionsBrows', class: 'button' }, tr('View on GitHub'))),
       row('Profile data', 'History, bookmarks and settings are stored on this device only.', folder),
     ),
   );
@@ -608,7 +700,7 @@ function setupSearch() {
       any ||= sectionVisible;
     }
     empty.hidden = any;
-    empty.textContent = `No settings match “${input.value.trim()}”.`;
+    empty.textContent = tr('No settings match “{query}”.', { query: input.value.trim() });
   });
 }
 
@@ -617,11 +709,11 @@ async function build() {
   applyTheme(S);
   applyAccent(S.accent);
   const nav = document.getElementById('nav');
-  nav.append(el('div', { class: 'brand' }, el('img', { src: 'lions://assets/logo.svg', alt: '' }), 'Settings'));
+  nav.append(el('div', { class: 'brand' }, el('img', { src: 'lions://assets/logo.svg', alt: '' }), tr('Settings')));
   for (const [id, title, ic] of SECTIONS) {
     if (id === SECONDARY_FROM) nav.append(el('div', { class: 'nav-sep' }));
     const a = el('a', { href: `#${id}`, 'data-id': id, html: icon(ic, 20) });
-    a.append(el('span', {}, title));
+    a.append(el('span', {}, tr(title)));
     nav.append(a);
   }
 

@@ -108,6 +108,39 @@ class History {
       .map(plain);
   }
 
+  importVisits(rows) {
+    if (this.closed || !rows.length) return 0;
+    const byUrl = new Map();
+    for (const r of rows) {
+      if (!isRecordable(r.url)) continue;
+      let entry = byUrl.get(r.url);
+      if (!entry) byUrl.set(r.url, (entry = { title: r.title || '', typed: r.typed || 0, times: [] }));
+      entry.times.push(r.time);
+    }
+    const upsert = this.db.prepare(`
+      INSERT INTO urls (url, title) VALUES (?, ?)
+      ON CONFLICT(url) DO UPDATE SET title = CASE WHEN title = '' THEN excluded.title ELSE title END
+      RETURNING id`);
+    const visit = this.db.prepare('INSERT INTO visits (url_id, time) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM visits WHERE url_id = ? AND time = ?)');
+    const bump = this.db.prepare('UPDATE urls SET visit_count = visit_count + ?, typed_count = MAX(typed_count, ?), last_visit = MAX(last_visit, ?) WHERE id = ?');
+    let added = 0;
+    this.db.exec('BEGIN');
+    try {
+      for (const [url, entry] of byUrl) {
+        const { id } = upsert.get(url, entry.title);
+        let inserted = 0;
+        for (const time of entry.times) inserted += Number(visit.run(id, time, id, time).changes);
+        bump.run(inserted, entry.typed, entry.times.reduce((a, b) => Math.max(a, b), 0), id);
+        added += inserted;
+      }
+      this.db.exec('COMMIT');
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
+    return added;
+  }
+
   deleteUrl(url) {
     if (!this.closed) this.q.deleteUrl.run(url);
   }

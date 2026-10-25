@@ -10,6 +10,7 @@ let nextId = 1;
 const live = new Map();
 let store = null;
 let notifyTimer = null;
+let startedThisSession = 0;
 
 function init() {
   store = new JsonStore(path.join(app.getPath('userData'), 'downloads.json'), { items: [] });
@@ -33,6 +34,7 @@ function uniquePath(dir, filename) {
 
 function attach(ses, { isPrivate }) {
   ses.on('will-download', (_event, item) => {
+    startedThisSession++;
     if (!ctx.settings().askWhereToSave) item.setSavePath(uniquePath(downloadsDir(), item.getFilename()));
     const record = {
       id: nextId++,
@@ -89,7 +91,7 @@ function summary() {
   const active = [...live.values()].map((l) => l.record);
   const total = active.reduce((s, r) => s + (r.total || 0), 0);
   const received = active.reduce((s, r) => s + (r.received || 0), 0);
-  return { active: active.length, progress: total ? received / total : active.length ? -1 : 0 };
+  return { active: active.length, progress: total ? received / total : active.length ? -1 : 0, session: startedThisSession };
 }
 
 function find(id) {

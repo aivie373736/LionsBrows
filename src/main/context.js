@@ -6,6 +6,7 @@ const { app, nativeTheme } = require('electron');
 const { JsonStore } = require('./store');
 const { History } = require('./history');
 const searchEngines = require('./search-engines');
+const { tr } = require('./i18n');
 
 const DEFAULT_SETTINGS = {
   searchEngine: 'google',
@@ -13,11 +14,16 @@ const DEFAULT_SETTINGS = {
   customSearchName: '',
   customSearchUrl: '',
   startup: 'restore',
+  language: 'auto',
+  autoUpdate: true,
   layout: 'horizontal',
   theme: 'system',
   accent: '#7542e5',
   frameColor: '',
   showBookmarksBar: false,
+  showSplitButton: false,
+  showNotesButton: false,
+  downloadsButton: 'auto',
   sidebarCollapsed: false,
   adblock: true,
   httpsUpgrade: true,
@@ -35,6 +41,9 @@ const DEFAULT_SETTINGS = {
   ntBackgroundFile: '',
   ntBackgroundDim: 0.25,
   ntBackgroundBlur: 0,
+  readerFont: 'serif',
+  readerSize: 20,
+  readerTheme: 'auto',
 };
 
 const ACCENTS = {
@@ -87,7 +96,7 @@ const ctx = {
     const dir = app.getPath('userData');
     this.config = new JsonStore(path.join(dir, 'config.json'), {
       settings: DEFAULT_SETTINGS,
-      workspaces: [{ id: 'home', name: 'Personal', color: WORKSPACE_COLORS[0], isolated: false }],
+      workspaces: [{ id: 'home', name: tr('Personal'), color: WORKSPACE_COLORS[0], isolated: false }],
       permissions: {},
       adblockAllowlist: [],
       httpOnlyHosts: [],

@@ -6,6 +6,7 @@ const { ctx } = require('./context');
 const downloads = require('./downloads');
 const bookmarks = require('./bookmarks');
 const adblock = require('./adblock');
+const { tr } = require('./i18n');
 
 const isMac = process.platform === 'darwin';
 const pick = (other, mac) => (isMac ? mac : other);
@@ -59,7 +60,7 @@ async function screenshot(w) {
     if (wc.debugger.isAttached()) wc.debugger.detach();
   }
   const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
-  const file = downloads.uniquePath(downloads.downloadsDir(), `Screenshot ${stamp}.png`);
+  const file = downloads.uniquePath(downloads.downloadsDir(), `${tr('Screenshot')} ${stamp}.png`);
   fs.writeFileSync(file, png);
   shell.showItemInFolder(file);
 }
@@ -70,7 +71,7 @@ async function savePage(w) {
   const name = (w.activeTab().title || 'page').replace(/[\\/:*?"<>|]/g, '_').slice(0, 100);
   const { canceled, filePath } = await dialog.showSaveDialog(w.win, {
     defaultPath: downloads.uniquePath(downloads.downloadsDir(), `${name}.html`),
-    filters: [{ name: 'Web page, complete', extensions: ['html'] }],
+    filters: [{ name: tr('Web page, complete'), extensions: ['html'] }],
   });
   if (!canceled && filePath) await wc.savePage(filePath, 'HTMLComplete');
 }
@@ -99,7 +100,7 @@ const ACTIONS = {
 
   nextTab: { title: 'Next tab', keys: [pick('mod+tab', 'ctrl+tab'), 'mod+pagedown', pick('mod+alt+arrowdown', 'mod+alt+arrowright')], hidden: true, run: (w) => cycleTab(w, 1) },
   prevTab: { title: 'Previous tab', keys: [pick('mod+shift+tab', 'ctrl+shift+tab'), 'mod+pageup', pick('mod+alt+arrowup', 'mod+alt+arrowleft')], hidden: true, run: (w) => cycleTab(w, -1) },
-  ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8].map((n) => [`tab${n}`, { title: `Go to tab ${n}`, keys: [`mod+${n}`], hidden: true, run: (w) => nthTab(w, n - 1) }])),
+  ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8].map((n) => [`tab${n}`, { title: 'Go to tab {n}', vars: { n }, keys: [`mod+${n}`], hidden: true, run: (w) => nthTab(w, n - 1) }])),
   lastTab: { title: 'Go to last tab', keys: ['mod+9'], hidden: true, run: (w) => nthTab(w, -1) },
 
   back: { title: 'Back', keys: ['alt+arrowleft', 'mod+['], hidden: true, run: (w) => w.activeTab()?.back() },
@@ -108,6 +109,7 @@ const ACTIONS = {
   hardReload: { title: 'Hard reload (ignore cache)', keys: ['mod+shift+r', 'shift+f5', 'mod+f5'], run: (w) => w.activeTab()?.reload(true) },
 
   find: { title: 'Find in page', keys: ['mod+f'], run: (w) => w.openFind() },
+  reader: { title: 'Reader view', keys: ['mod+alt+r', 'f9'], run: (w) => require('./reader').toggle(w.activeTab()) },
   findNext: { title: 'Find next', keys: ['mod+g', 'f3'], hidden: true, run: (w) => w.find.open && w.findText(w.find.query, { next: true }) },
   findPrev: { title: 'Find previous', keys: ['mod+shift+g', 'shift+f3'], hidden: true, run: (w) => w.find.open && w.findText(w.find.query, { next: true, forward: false }) },
 
@@ -149,7 +151,7 @@ const ACTIONS = {
     },
   },
 
-  newWorkspace: { title: 'New workspace', run: (w) => w.openPalette('prompt', { title: 'Name your new workspace', action: 'newWorkspace', value: '' }) },
+  newWorkspace: { title: 'New workspace', run: (w) => w.openPalette('prompt', { title: tr('Name your new workspace'), action: 'newWorkspace', value: '' }) },
   nextWorkspace: { title: 'Next workspace', keys: [pick('alt+shift+arrowdown', 'ctrl+shift+arrowdown')], run: (w) => w.cycleWorkspace(1) },
   prevWorkspace: { title: 'Previous workspace', keys: [pick('alt+shift+arrowup', 'ctrl+shift+arrowup')], run: (w) => w.cycleWorkspace(-1) },
 

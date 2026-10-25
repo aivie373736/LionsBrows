@@ -17,40 +17,40 @@ try {
 }
 
 const n = Number(code);
-let title = 'This page isn’t working';
-let text = 'Something went wrong while loading this page.';
+let title = tr('This page isn’t working');
+let text = tr('Something went wrong while loading this page.');
 let glyph = 'globe';
 
 if (code === 'crash') {
-  title = 'This page crashed';
-  text = 'Something went wrong while displaying this page. Reloading usually fixes it.';
+  title = tr('This page crashed');
+  text = tr('Something went wrong while displaying this page. Reloading usually fixes it.');
   glyph = 'triangle-alert';
 } else if (n === -105 || n === -137) {
-  title = 'This site can’t be reached';
-  text = `Check if there is a typo in ${host}.`;
+  title = tr('This site can’t be reached');
+  text = tr('Check if there is a typo in {host}.', { host });
 } else if (n === -106) {
-  title = 'No internet connection';
-  text = 'Check your network connection and try again.';
+  title = tr('No internet connection');
+  text = tr('Check your network connection and try again.');
 } else if (n === -102) {
-  title = 'This site can’t be reached';
-  text = `${host} refused to connect.`;
+  title = tr('This site can’t be reached');
+  text = tr('{host} refused to connect.', { host });
 } else if (n === -118 || n === -7) {
-  title = 'This site can’t be reached';
-  text = `${host} took too long to respond.`;
+  title = tr('This site can’t be reached');
+  text = tr('{host} took too long to respond.', { host });
 } else if (n === -21) {
-  title = 'Your connection was interrupted';
-  text = 'A network change was detected.';
+  title = tr('Your connection was interrupted');
+  text = tr('A network change was detected.');
 } else if (n <= -200 && n > -300) {
-  title = 'Your connection isn’t private';
-  text = `LionsBrows stopped loading ${host} because its security certificate isn’t valid. Someone could be trying to intercept your information.`;
+  title = tr('Your connection isn’t private');
+  text = tr('LionsBrows stopped loading {host} because its security certificate isn’t valid. Someone could be trying to intercept your information.', { host });
   glyph = 'lock';
 } else if (n === -20) {
-  title = 'This page has been blocked';
-  text = 'A setting or extension blocked this page.';
+  title = tr('This page has been blocked');
+  text = tr('A setting or extension blocked this page.');
   glyph = 'shield';
 } else if (n === -300) {
-  title = 'Invalid address';
-  text = 'Check the address and try again.';
+  title = tr('Invalid address');
+  text = tr('Check the address and try again.');
 }
 
 document.getElementById('icon').innerHTML = icon(glyph, 48);
@@ -58,7 +58,7 @@ document.title = title;
 document.getElementById('title').textContent = title;
 document.getElementById('desc').textContent = text;
 document.getElementById('url').textContent = url;
-document.getElementById('code').textContent = code === 'crash' ? desc : desc || (code ? `Error ${code}` : '');
+document.getElementById('code').textContent = code === 'crash' ? desc : desc || (code ? tr('Error {code}', { code }) : '');
 document.getElementById('retry').onclick = () => {
   if (url) location.href = url;
 };

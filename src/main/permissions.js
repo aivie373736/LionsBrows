@@ -2,6 +2,7 @@
 
 const { dialog, desktopCapturer, BaseWindow } = require('electron');
 const { ctx } = require('./context');
+const { tr } = require('./i18n');
 
 const ALWAYS_ALLOW = new Set([
   'fullscreen',
@@ -32,11 +33,11 @@ const pending = new Map();
 function describe(permission, details) {
   if (permission === 'media') {
     const types = details.mediaTypes || [];
-    if (types.includes('video') && types.includes('audio')) return 'use your camera and microphone';
-    if (types.includes('video')) return 'use your camera';
-    return 'use your microphone';
+    if (types.includes('video') && types.includes('audio')) return tr('use your camera and microphone');
+    if (types.includes('video')) return tr('use your camera');
+    return tr('use your microphone');
   }
-  return DESCRIPTIONS[permission] || `use "${permission}"`;
+  return DESCRIPTIONS[permission] ? tr(DESCRIPTIONS[permission]) : tr('use “{name}”', { name: permission });
 }
 
 function keyFor(permission, details) {
@@ -72,12 +73,12 @@ async function prompt(wc, origin, text) {
   const host = origin.replace(/^https?:\/\//, '');
   const { response, checkboxChecked } = await dialog.showMessageBox(windowFor(wc), {
     type: 'question',
-    buttons: ['Allow', 'Block'],
+    buttons: [tr('Allow'), tr('Block')],
     defaultId: 1,
     cancelId: 1,
-    title: 'Permission request',
-    message: `${host} wants to ${text}`,
-    checkboxLabel: 'Remember my decision for this site',
+    title: tr('Permission request'),
+    message: tr('{host} wants to {action}', { host, action: text }),
+    checkboxLabel: tr('Remember my decision for this site'),
     checkboxChecked: true,
   });
   return { allow: response === 0, remember: checkboxChecked };
@@ -120,7 +121,7 @@ function attach(ses, { isPrivate }) {
     async (request, callback) => {
       const origin = originOf(request.securityOrigin || request.frame?.url || '');
       try {
-        const answer = await prompt(request.frame, origin || 'This site', 'share your entire screen');
+        const answer = await prompt(request.frame, origin || tr('This site'), tr('share your entire screen'));
         if (!answer.allow) return callback({});
         const [screen] = await desktopCapturer.getSources({ types: ['screen'] });
         callback(screen ? { video: screen } : {});

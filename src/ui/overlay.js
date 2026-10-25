@@ -28,10 +28,10 @@ const TYPE_ICON = {
   workspace: 'layers',
 };
 const TYPE_BADGE = {
-  tab: 'Switch to tab',
-  workspace: 'Switch',
-  url: 'Open',
-  calc: 'Copy',
+  tab: tr('Switch to tab'),
+  workspace: tr('Switch'),
+  url: tr('Open'),
+  calc: tr('Copy'),
 };
 
 function el(tag, className, text) {
@@ -54,7 +54,7 @@ function render() {
   if (selected >= list.length) selected = Math.max(0, list.length - 1);
   let lastGroup = null;
   list.forEach((item, i) => {
-    const group = !input.value.trim() ? (item.type === 'tab' ? 'Recent tabs' : 'Quick actions') : null;
+    const group = !input.value.trim() ? (item.type === 'tab' ? tr('Recent tabs') : tr('Quick actions')) : null;
     if (group && group !== lastGroup) {
       results.append(el('div', 'group', group));
       lastGroup = group;
@@ -79,7 +79,7 @@ function render() {
     row.append(ico, text);
     if (item.type !== 'command' && i === selected) {
       const isSearch = item.type === 'search' || item.type === 'suggestion';
-      row.append(el('span', 'badge', TYPE_BADGE[item.type] || (isSearch ? 'Search' : 'Open')));
+      row.append(el('span', 'badge', TYPE_BADGE[item.type] || (isSearch ? tr('Search') : tr('Open'))));
     }
     row.addEventListener('mousemove', () => {
       if (selected !== i) {
@@ -163,14 +163,14 @@ $('#backdrop').addEventListener('mousedown', () => call('close'));
 function setHints() {
   const hints =
     mode === 'prompt'
-      ? [['Enter', 'save'], ['Esc', 'cancel']]
+      ? [['Enter', tr('save')], ['Esc', tr('cancel')]]
       : [
-          ['↑↓', 'select'],
-          ['Enter', 'open'],
-          [`Shift+Enter`, 'new tab'],
-          ['>', 'commands'],
-          ['!yt', 'bangs'],
-          ['2+2', 'math'],
+          ['↑↓', tr('select')],
+          ['Enter', tr('open')],
+          ['Shift+Enter', tr('new tab')],
+          ['>', tr('commands')],
+          ['!yt', tr('bangs')],
+          ['2+2', tr('math')],
         ];
   $('#hints').innerHTML = hints.map(([k, v]) => `<span><b>${k}</b> ${v}</span>`).join('');
 }
@@ -185,7 +185,7 @@ window.lions.on('overlay:open', (opts) => {
   $('#prompt-title').textContent = prompt ? prompt.title : '';
   $('#lead').innerHTML = mode === 'prompt' ? icon('layers', 20) : mode === 'address' ? icon('globe', 20) : icon('search', 20);
   input.placeholder =
-    mode === 'prompt' ? 'Type a name' : mode === 'address' ? 'Search or enter address' : 'Search tabs, history and the web — or type > for commands';
+    mode === 'prompt' ? tr('Type a name') : mode === 'address' ? tr('Search or enter address') : tr('Search tabs, history and the web — or type > for commands');
   input.value = mode === 'prompt' ? opts.value || '' : opts.text || '';
   setHints();
   const p = $('#palette');

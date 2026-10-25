@@ -75,20 +75,20 @@ function dayLabel(ts) {
   const today = new Date();
   const yesterday = new Date(Date.now() - 86_400_000);
   const same = (a, b) => a.toDateString() === b.toDateString();
-  if (same(d, today)) return 'Today';
-  if (same(d, yesterday)) return 'Yesterday';
-  return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+  if (same(d, today)) return tr('Today');
+  if (same(d, yesterday)) return tr('Yesterday');
+  return d.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 }
 
 function timeLabel(ts) {
-  return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  return new Date(ts).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatBytes(n) {
   if (!n) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
-  return `${(n / 1024 ** i).toFixed(i ? 1 : 0)} ${units[i]}`;
+  return `${(n / 1024 ** i).toLocaleString(LOCALE, { maximumFractionDigits: i ? 1 : 0 })} ${units[i]}`;
 }
 
 function debounce(fn, ms) {
@@ -107,24 +107,24 @@ const LIBRARY = [
 
 function libraryShell(active, placeholder) {
   const nav = document.getElementById('nav');
-  nav.append(el('div', { class: 'brand' }, el('img', { src: 'lions://assets/logo.svg', alt: '' }), 'Library'));
+  nav.append(el('div', { class: 'brand' }, el('img', { src: 'lions://assets/logo.svg', alt: '' }), tr('Library')));
   for (const [id, title, iconName] of LIBRARY) {
     const a = el('a', { href: `lions://${id}/`, class: id === active ? 'active' : null, html: icon(iconName, 20) });
-    a.append(el('span', {}, title));
+    a.append(el('span', {}, tr(title)));
     nav.append(a);
   }
   nav.append(el('div', { class: 'nav-sep' }));
   const settings = el('a', { href: 'lions://settings/', html: icon('settings', 20) });
-  settings.append(el('span', {}, 'Settings'));
+  settings.append(el('span', {}, tr('Settings')));
   nav.append(settings);
 
   const [, title, iconName] = LIBRARY.find(([id]) => id === active);
   const heading = document.getElementById('page-title');
   heading.innerHTML = icon(iconName, 26);
-  heading.append(title);
+  heading.append(tr(title));
   document.getElementById('search-icon').innerHTML = icon('search', 20);
   const search = document.getElementById('page-search');
-  search.placeholder = placeholder;
+  search.placeholder = tr(placeholder);
   return search;
 }
 

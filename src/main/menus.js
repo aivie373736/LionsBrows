@@ -7,6 +7,7 @@ const omnibox = require('./omnibox');
 const adblock = require('./adblock');
 const workspaces = require('./workspaces');
 const { run, accelerator, openWindow, openInternal } = require('./actions');
+const { tr, locale } = require('./i18n');
 
 const SEP = { type: 'separator' };
 const isMac = process.platform === 'darwin';
@@ -46,22 +47,22 @@ function pageMenu(tab, params) {
 
   if (params.linkURL) {
     t.push(
-      { label: 'Open link in new tab', click: () => w.newTab({ url: params.linkURL, background: true, afterId: tab.id }) },
-      { label: 'Open link in split view', click: () => w.openInSplit(params.linkURL) },
-      { label: 'Open link in new window', click: () => openWindow({ urls: [params.linkURL] }) },
-      { label: 'Open link in private window', click: () => openWindow({ isPrivate: true, urls: [params.linkURL] }) },
+      { label: tr('Open link in new tab'), click: () => w.newTab({ url: params.linkURL, background: true, afterId: tab.id }) },
+      { label: tr('Open link in split view'), click: () => w.openInSplit(params.linkURL) },
+      { label: tr('Open link in new window'), click: () => openWindow({ urls: [params.linkURL] }) },
+      { label: tr('Open link in private window'), click: () => openWindow({ isPrivate: true, urls: [params.linkURL] }) },
       SEP,
-      { label: 'Copy link address', click: () => clipboard.writeText(params.linkURL) },
+      { label: tr('Copy link address'), click: () => clipboard.writeText(params.linkURL) },
       SEP,
     );
   }
 
   if (params.mediaType === 'image' && params.srcURL) {
     t.push(
-      { label: 'Open image in new tab', click: () => w.newTab({ url: params.srcURL, background: true, afterId: tab.id }) },
-      { label: 'Save image as…', click: () => wc.downloadURL(params.srcURL) },
-      { label: 'Copy image', click: () => wc.copyImageAt(params.x, params.y) },
-      { label: 'Copy image address', click: () => clipboard.writeText(params.srcURL) },
+      { label: tr('Open image in new tab'), click: () => w.newTab({ url: params.srcURL, background: true, afterId: tab.id }) },
+      { label: tr('Save image as…'), click: () => wc.downloadURL(params.srcURL) },
+      { label: tr('Copy image'), click: () => wc.copyImageAt(params.x, params.y) },
+      { label: tr('Copy image address'), click: () => clipboard.writeText(params.srcURL) },
       SEP,
     );
   }
@@ -71,7 +72,7 @@ function pageMenu(tab, params) {
     const y = Math.round(params.y);
     t.push(
       {
-        label: 'Picture in picture',
+        label: tr('Picture in picture'),
         click: () =>
           wc
             .executeJavaScript(
@@ -87,7 +88,7 @@ function pageMenu(tab, params) {
   if (params.isEditable) {
     if (params.misspelledWord) {
       for (const s of params.dictionarySuggestions.slice(0, 5)) t.push({ label: s, click: () => wc.replaceMisspelling(s) });
-      t.push({ label: 'Add to dictionary', click: () => wc.session.addWordToSpellCheckerDictionary(params.misspelledWord) }, SEP);
+      t.push({ label: tr('Add to dictionary'), click: () => wc.session.addWordToSpellCheckerDictionary(params.misspelledWord) }, SEP);
     }
     const f = params.editFlags;
     t.push(
@@ -106,26 +107,26 @@ function pageMenu(tab, params) {
     t.push({ role: 'copy' });
     const asUrl = omnibox.classify(sel, engineId);
     if (asUrl && asUrl.type === 'url' && !/\s/.test(sel)) {
-      t.push({ label: `Go to ${short(sel)}`, click: () => w.newTab({ url: asUrl.url, afterId: tab.id }) });
+      t.push({ label: tr('Go to {text}', { text: short(sel) }), click: () => w.newTab({ url: asUrl.url, afterId: tab.id }) });
     }
-    t.push({ label: `Search ${engine(engineId).name} for “${short(sel)}”`, click: () => w.newTab({ url: searchUrl(engineId, sel), afterId: tab.id }) }, SEP);
+    t.push({ label: tr('Search {engine} for “{text}”', { engine: engine(engineId).name, text: short(sel) }), click: () => w.newTab({ url: searchUrl(engineId, sel), afterId: tab.id }) }, SEP);
   }
 
   if (!params.linkURL && !params.isEditable && !params.selectionText && params.mediaType === 'none') {
     const h = wc.navigationHistory;
     t.push(
-      { label: 'Back', enabled: h.canGoBack(), click: () => tab.back() },
-      { label: 'Forward', enabled: h.canGoForward(), click: () => tab.forward() },
-      { label: 'Reload', click: () => tab.reload() },
+      { label: tr('Back'), enabled: h.canGoBack(), click: () => tab.back() },
+      { label: tr('Forward'), enabled: h.canGoForward(), click: () => tab.forward() },
+      { label: tr('Reload'), click: () => tab.reload() },
       SEP,
-      { label: 'Save page as…', click: () => run('savePage', w) },
-      { label: 'Print…', click: () => wc.print() },
-      { label: 'Take full-page screenshot', click: () => run('screenshot', w) },
+      { label: tr('Save page as…'), click: () => run('savePage', w) },
+      { label: tr('Print…'), click: () => wc.print() },
+      { label: tr('Take full-page screenshot'), click: () => run('screenshot', w) },
       SEP,
     );
   }
 
-  t.push({ label: 'Inspect', click: () => wc.inspectElement(params.x, params.y) });
+  t.push({ label: tr('Inspect'), click: () => wc.inspectElement(params.x, params.y) });
   popup(w, t, { frame: params.frame });
 }
 
@@ -135,75 +136,128 @@ function tabMenu(w, tabId) {
   const visible = w.visibleTabs().includes(tab);
   const others = ctx.workspaces().filter((ws) => ws.id !== tab.workspaceId);
   popup(w, [
-    { label: 'New tab', click: () => w.newTab({ afterId: tab.id }) },
-    { label: 'Reload', click: () => tab.reload() },
-    { label: 'Duplicate', click: () => w.duplicateTab(tab.id) },
-    { label: tab.pinned ? 'Unpin tab' : 'Pin tab', click: () => w.togglePin(tab.id) },
-    { label: tab.muted ? 'Unmute tab' : 'Mute tab', click: () => tab.setMuted(!tab.muted) },
-    { label: 'Open in split view', enabled: !visible, click: () => w.splitWith(tab.id) },
-    { label: 'Put tab to sleep', enabled: !visible && !tab.sleeping, click: () => w.sleepTab(tab.id) },
+    { label: tr('New tab'), click: () => w.newTab({ afterId: tab.id }) },
+    { label: tr('Reload'), click: () => tab.reload() },
+    { label: tr('Duplicate'), click: () => w.duplicateTab(tab.id) },
+    { label: tab.pinned ? tr('Unpin tab') : tr('Pin tab'), click: () => w.togglePin(tab.id) },
+    { label: tab.muted ? tr('Unmute tab') : tr('Mute tab'), click: () => tab.setMuted(!tab.muted) },
+    { label: tr('Open in split view'), enabled: !visible, click: () => w.splitWith(tab.id) },
+    { label: tr('Put tab to sleep'), enabled: !visible && !tab.sleeping, click: () => w.sleepTab(tab.id) },
     !w.isPrivate && others.length
-      ? { label: 'Move to workspace', submenu: others.map((ws) => ({ label: ws.name, click: () => w.moveTabToWorkspace(tab.id, ws.id) })) }
+      ? { label: tr('Move to workspace'), submenu: others.map((ws) => ({ label: ws.name, click: () => w.moveTabToWorkspace(tab.id, ws.id) })) }
       : null,
-    { label: 'Copy link', enabled: !tab.url.startsWith('lions://newtab'), click: () => clipboard.writeText(tab.displayUrl) },
+    { label: tr('Copy link'), enabled: !tab.url.startsWith('lions://newtab'), click: () => clipboard.writeText(tab.displayUrl) },
     SEP,
-    { label: 'Close tab', click: () => w.closeTab(tab.id) },
-    { label: 'Close other tabs', click: () => w.closeOtherTabs(tab.id) },
-    { label: 'Close tabs below', click: () => w.closeTabsBelow(tab.id) },
+    { label: tr('Close tab'), click: () => w.closeTab(tab.id) },
+    { label: tr('Close other tabs'), click: () => w.closeOtherTabs(tab.id) },
+    { label: tr('Close tabs below'), click: () => w.closeTabsBelow(tab.id) },
   ]);
+}
+
+function toolbarItems() {
+  const s = ctx.settings();
+  return [
+    { label: tr('Split view button'), type: 'checkbox', checked: s.showSplitButton, click: () => ctx.setSetting('showSplitButton', !s.showSplitButton) },
+    { label: tr('Notes button'), type: 'checkbox', checked: s.showNotesButton, click: () => ctx.setSetting('showNotesButton', !s.showNotesButton) },
+    {
+      label: tr('Always show downloads button'),
+      type: 'checkbox',
+      checked: s.downloadsButton === 'always',
+      click: () => ctx.setSetting('downloadsButton', s.downloadsButton === 'always' ? 'auto' : 'always'),
+    },
+  ];
+}
+
+function toolbarMenu(w, x, y) {
+  const s = ctx.settings();
+  popup(
+    w,
+    [
+      ...toolbarItems(),
+      SEP,
+      { label: tr('Bookmarks toolbar'), type: 'checkbox', checked: s.showBookmarksBar, click: () => ctx.setSetting('showBookmarksBar', !s.showBookmarksBar) },
+      { label: tr('Tabs on the side'), type: 'checkbox', checked: !w.horizontal, click: () => ctx.setSetting('layout', w.horizontal ? 'vertical' : 'horizontal') },
+    ],
+    { x: Math.round(x), y: Math.round(y) },
+  );
+}
+
+function workspacesSubmenu(w) {
+  if (w.isPrivate) return null;
+  return {
+    label: tr('Workspaces'),
+    submenu: [
+      ...ctx.workspaces().map((ws) => ({ label: ws.name, type: 'radio', checked: ws.id === w.activeWorkspaceId, click: () => w.switchWorkspace(ws.id) })),
+      SEP,
+      { label: tr('New workspace…'), click: () => run('newWorkspace', w) },
+    ],
+  };
+}
+
+function updateItem() {
+  const u = require('./updater').state();
+  if (u.status === 'ready') return { label: tr('Restart to update to {version}', u), click: () => require('./updater').install() };
+  if (u.status === 'available') return { label: tr('Download LionsBrows {version}', u), click: () => require('./updater').install() };
+  return null;
 }
 
 function mainMenu(w, x, y) {
   const tab = w.activeTab();
   const zoom = tab?.wc ? Math.round(tab.wc.getZoomFactor() * 100) : 100;
+  const update = updateItem();
   popup(
     w,
     [
-      { label: 'New tab', ...acc('newTab'), click: () => run('newTab', w) },
-      { label: 'New window', ...acc('newWindow'), click: () => run('newWindow', w) },
-      { label: 'New private window', ...acc('newPrivateWindow'), click: () => run('newPrivateWindow', w) },
-      { label: 'Reopen closed tab', ...acc('reopenTab'), enabled: w.closed.length > 0, click: () => run('reopenTab', w) },
+      update,
+      update ? SEP : null,
+      { label: tr('New tab'), ...acc('newTab'), click: () => run('newTab', w) },
+      { label: tr('New window'), ...acc('newWindow'), click: () => run('newWindow', w) },
+      { label: tr('New private window'), ...acc('newPrivateWindow'), click: () => run('newPrivateWindow', w) },
+      { label: tr('Reopen closed tab'), ...acc('reopenTab'), enabled: w.closed.length > 0, click: () => run('reopenTab', w) },
       SEP,
-      { label: 'History', ...acc('history'), click: () => run('history', w) },
-      { label: 'Bookmarks', ...acc('bookmarksPage'), click: () => run('bookmarksPage', w) },
-      { label: 'Downloads', ...acc('downloads'), click: () => run('downloads', w) },
-      { label: 'Notes', ...acc('notes'), click: () => run('notes', w) },
+      { label: tr('History'), ...acc('history'), click: () => run('history', w) },
+      { label: tr('Bookmarks'), ...acc('bookmarksPage'), click: () => run('bookmarksPage', w) },
+      { label: tr('Downloads'), ...acc('downloads'), click: () => run('downloads', w) },
+      { label: tr('Notes'), ...acc('notes'), click: () => run('notes', w) },
+      workspacesSubmenu(w),
       SEP,
       {
-        label: `Zoom (${zoom}%)`,
+        label: tr('Zoom ({zoom}%)', { zoom }),
         submenu: [
-          { label: 'Zoom in', ...acc('zoomIn'), click: () => run('zoomIn', w) },
-          { label: 'Zoom out', ...acc('zoomOut'), click: () => run('zoomOut', w) },
-          { label: 'Reset to 100%', ...acc('zoomReset'), click: () => run('zoomReset', w) },
+          { label: tr('Zoom in'), ...acc('zoomIn'), click: () => run('zoomIn', w) },
+          { label: tr('Zoom out'), ...acc('zoomOut'), click: () => run('zoomOut', w) },
+          { label: tr('Reset to 100%'), ...acc('zoomReset'), click: () => run('zoomReset', w) },
         ],
       },
-      { label: 'Find in page…', ...acc('find'), click: () => run('find', w) },
-      { label: 'Split view', ...acc('split'), type: 'checkbox', checked: Boolean(w.space().split), click: () => run('split', w) },
+      { label: tr('Find in page…'), ...acc('find'), click: () => run('find', w) },
+      { label: tr('Split view'), ...acc('split'), type: 'checkbox', checked: Boolean(w.space().split), click: () => run('split', w) },
       {
-        label: 'More tools',
+        label: tr('More tools'),
         submenu: [
-          { label: 'Take full-page screenshot', click: () => run('screenshot', w) },
-          { label: 'Save page as…', ...acc('savePage'), click: () => run('savePage', w) },
-          { label: 'Print…', ...acc('print'), click: () => run('print', w) },
-          { label: 'Put background tabs to sleep', click: () => run('sleepTabs', w) },
+          { label: tr('Take full-page screenshot'), click: () => run('screenshot', w) },
+          { label: tr('Save page as…'), ...acc('savePage'), click: () => run('savePage', w) },
+          { label: tr('Print…'), ...acc('print'), click: () => run('print', w) },
+          { label: tr('Put background tabs to sleep'), click: () => run('sleepTabs', w) },
           SEP,
-          { label: 'Developer tools', ...acc('devtools'), click: () => run('devtools', w) },
+          { label: tr('Developer tools'), ...acc('devtools'), click: () => run('devtools', w) },
         ],
       },
       SEP,
       {
-        label: 'Customize',
+        label: tr('Customize'),
         submenu: [
-          { label: 'Tabs on the side', type: 'checkbox', checked: !w.horizontal, click: () => ctx.setSetting('layout', w.horizontal ? 'vertical' : 'horizontal') },
-          { label: 'Bookmarks toolbar', type: 'checkbox', checked: ctx.settings().showBookmarksBar, click: () => ctx.setSetting('showBookmarksBar', !ctx.settings().showBookmarksBar) },
+          { label: tr('Tabs on the side'), type: 'checkbox', checked: !w.horizontal, click: () => ctx.setSetting('layout', w.horizontal ? 'vertical' : 'horizontal') },
+          { label: tr('Bookmarks toolbar'), type: 'checkbox', checked: ctx.settings().showBookmarksBar, click: () => ctx.setSetting('showBookmarksBar', !ctx.settings().showBookmarksBar) },
           SEP,
-          { label: 'Colors and background…', click: () => w.newTab({ url: 'lions://settings/#appearance' }) },
+          ...toolbarItems(),
+          SEP,
+          { label: tr('Colors and background…'), click: () => w.newTab({ url: 'lions://settings/#appearance' }) },
         ],
       },
-      { label: 'Settings', ...acc('settings'), click: () => run('settings', w) },
-      { label: 'About LionsBrows', click: () => w.newTab({ url: 'lions://settings/#about' }) },
+      { label: tr('Settings'), ...acc('settings'), click: () => run('settings', w) },
+      { label: tr('About LionsBrows'), click: () => w.newTab({ url: 'lions://settings/#about' }) },
       isMac ? null : SEP,
-      isMac ? null : { label: 'Exit', click: () => app.quit() },
+      isMac ? null : { label: tr('Exit'), click: () => app.quit() },
     ],
     { x: Math.round(x), y: Math.round(y) },
   );
@@ -219,11 +273,11 @@ function shieldMenu(w, x, y) {
   popup(
     w,
     [
-      { label: isWeb ? `${tab.blocked} ads & trackers blocked on this page` : 'The ad blocker works on websites', enabled: false },
+      { label: isWeb ? tr('{n} ads & trackers blocked on this page', { n: tab.blocked }) : tr('The ad blocker works on websites'), enabled: false },
       SEP,
       isWeb
         ? {
-            label: `Block ads on ${host}`,
+            label: tr('Block ads on {host}', { host }),
             type: 'checkbox',
             checked: on && !adblock.isAllowlisted(url),
             enabled: on,
@@ -233,10 +287,10 @@ function shieldMenu(w, x, y) {
             },
           }
         : null,
-      { label: 'Ad blocker on all sites', type: 'checkbox', checked: on, click: () => ctx.setSetting('adblock', !on) },
+      { label: tr('Ad blocker on all sites'), type: 'checkbox', checked: on, click: () => ctx.setSetting('adblock', !on) },
       SEP,
-      { label: `${total.toLocaleString('en-US')} blocked in total`, enabled: false },
-      { label: 'Privacy settings…', click: () => w.newTab({ url: 'lions://settings/#privacy' }) },
+      { label: tr('{n} blocked in total', { n: total.toLocaleString(locale()) }), enabled: false },
+      { label: tr('Privacy settings…'), click: () => w.newTab({ url: 'lions://settings/#privacy' }) },
     ],
     { x: Math.round(x), y: Math.round(y) },
   );
@@ -248,29 +302,29 @@ function workspaceMenu(w, wsId, x, y) {
   popup(
     w,
     [
-      { label: `Switch to ${ws.name}`, enabled: w.activeWorkspaceId !== ws.id, click: () => w.switchWorkspace(ws.id) },
-      { label: 'Rename…', click: () => w.openPalette('prompt', { title: 'Rename workspace', action: `renameWorkspace:${ws.id}`, value: ws.name }) },
-      { label: 'Color', submenu: Object.entries(workspaces.COLOR_NAMES).map(([color, name]) => ({ label: name, type: 'radio', checked: ws.color === color, click: () => workspaces.setColor(ws.id, color) })) },
+      { label: tr('Switch to {name}', { name: ws.name }), enabled: w.activeWorkspaceId !== ws.id, click: () => w.switchWorkspace(ws.id) },
+      { label: tr('Rename…'), click: () => w.openPalette('prompt', { title: tr('Rename workspace'), action: `renameWorkspace:${ws.id}`, value: ws.name }) },
+      { label: tr('Color'), submenu: Object.entries(workspaces.COLOR_NAMES).map(([color, name]) => ({ label: tr(name), type: 'radio', checked: ws.color === color, click: () => workspaces.setColor(ws.id, color) })) },
       {
-        label: 'Separate logins and cookies',
-        sublabel: 'Sign in to different accounts here',
+        label: tr('Separate logins and cookies'),
+        sublabel: tr('Sign in to different accounts here'),
         type: 'checkbox',
         checked: Boolean(ws.isolated),
         click: () => workspaces.setIsolated(ws.id, !ws.isolated),
       },
       SEP,
-      { label: 'New workspace…', click: () => run('newWorkspace', w) },
+      { label: tr('New workspace…'), click: () => run('newWorkspace', w) },
       {
-        label: 'Delete workspace…',
+        label: tr('Delete workspace…'),
         enabled: ctx.workspaces().length > 1,
         click: async () => {
           const { response } = await dialog.showMessageBox(w.win, {
             type: 'warning',
-            buttons: ['Delete', 'Cancel'],
+            buttons: [tr('Delete'), tr('Cancel')],
             defaultId: 1,
             cancelId: 1,
-            message: `Delete the workspace “${ws.name}”?`,
-            detail: 'Its tabs will be moved to another workspace.',
+            message: tr('Delete the workspace “{name}”?', { name: ws.name }),
+            detail: tr('Its tabs will be moved to another workspace.'),
           });
           if (response === 0) workspaces.remove(ws.id);
         },
@@ -292,26 +346,26 @@ function workspaceSwitcher(w, x, y) {
         click: () => w.switchWorkspace(ws.id),
       })),
       SEP,
-      { label: 'New workspace…', click: () => run('newWorkspace', w) },
-      { label: `Rename “${current.name}”…`, click: () => w.openPalette('prompt', { title: 'Rename workspace', action: `renameWorkspace:${current.id}`, value: current.name }) },
-      { label: 'Color', submenu: Object.entries(workspaces.COLOR_NAMES).map(([color, name]) => ({ label: name, type: 'radio', checked: current.color === color, click: () => workspaces.setColor(current.id, color) })) },
+      { label: tr('New workspace…'), click: () => run('newWorkspace', w) },
+      { label: tr('Rename “{name}”…', { name: current.name }), click: () => w.openPalette('prompt', { title: tr('Rename workspace'), action: `renameWorkspace:${current.id}`, value: current.name }) },
+      { label: tr('Color'), submenu: Object.entries(workspaces.COLOR_NAMES).map(([color, name]) => ({ label: tr(name), type: 'radio', checked: current.color === color, click: () => workspaces.setColor(current.id, color) })) },
       {
-        label: 'Separate logins and cookies',
+        label: tr('Separate logins and cookies'),
         type: 'checkbox',
         checked: Boolean(current.isolated),
         click: () => workspaces.setIsolated(current.id, !current.isolated),
       },
       {
-        label: `Delete “${current.name}”…`,
+        label: tr('Delete “{name}”…', { name: current.name }),
         enabled: ctx.workspaces().length > 1,
         click: async () => {
           const { response } = await dialog.showMessageBox(w.win, {
             type: 'warning',
-            buttons: ['Delete', 'Cancel'],
+            buttons: [tr('Delete'), tr('Cancel')],
             defaultId: 1,
             cancelId: 1,
-            message: `Delete the workspace “${current.name}”?`,
-            detail: 'Its tabs will be moved to another workspace.',
+            message: tr('Delete the workspace “{name}”?', { name: current.name }),
+            detail: tr('Its tabs will be moved to another workspace.'),
           });
           if (response === 0) workspaces.remove(current.id);
         },
@@ -326,7 +380,7 @@ function allTabsMenu(w, x, y) {
   popup(
     w,
     tabs.map((t) => ({
-      label: short(t.title || t.displayUrl || 'New Tab', 60),
+      label: short(t.title || t.displayUrl || tr('New Tab'), 60),
       type: 'checkbox',
       checked: t.id === w.space().activeId,
       click: () => w.activate(t.id),
@@ -341,15 +395,15 @@ function bookmarkMenu(w, id) {
     .find((x) => x.id === id);
   if (!b) return;
   popup(w, [
-    { label: 'Open in new tab', click: () => w.newTab({ url: b.url, background: true, afterId: w.space().activeId }) },
-    { label: 'Open in split view', click: () => w.openInSplit(b.url) },
-    { label: 'Open in private window', click: () => openWindow({ isPrivate: true, urls: [b.url] }) },
+    { label: tr('Open in new tab'), click: () => w.newTab({ url: b.url, background: true, afterId: w.space().activeId }) },
+    { label: tr('Open in split view'), click: () => w.openInSplit(b.url) },
+    { label: tr('Open in private window'), click: () => openWindow({ isPrivate: true, urls: [b.url] }) },
     SEP,
-    { label: 'Copy link', click: () => clipboard.writeText(b.url) },
-    { label: 'Delete bookmark', click: () => require('./bookmarks').remove(b.id) },
+    { label: tr('Copy link'), click: () => clipboard.writeText(b.url) },
+    { label: tr('Delete bookmark'), click: () => require('./bookmarks').remove(b.id) },
     SEP,
-    { label: 'Manage bookmarks', click: () => openInternal(w, 'bookmarks') },
-    { label: 'Hide bookmarks toolbar', click: () => ctx.setSetting('showBookmarksBar', false) },
+    { label: tr('Manage bookmarks'), click: () => openInternal(w, 'bookmarks') },
+    { label: tr('Hide bookmarks toolbar'), click: () => ctx.setSetting('showBookmarksBar', false) },
   ]);
 }
 
@@ -359,7 +413,7 @@ function installAppMenu() {
     return;
   }
   const act = (id, label) => ({
-    label,
+    label: tr(label),
     ...acc(id),
     click: () => {
       const w = ctx.lastFocusedWindow();
@@ -374,19 +428,19 @@ function installAppMenu() {
       submenu: [{ role: 'about' }, SEP, act('settings', 'Settings…'), SEP, { role: 'services' }, SEP, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, SEP, { role: 'quit' }],
     },
     {
-      label: 'File',
+      label: tr('File'),
       submenu: [act('newTab', 'New Tab'), act('newWindow', 'New Window'), act('newPrivateWindow', 'New Private Window'), act('reopenTab', 'Reopen Closed Tab'), SEP, act('focusAddress', 'Open Location…'), act('savePage', 'Save Page As…'), act('print', 'Print…'), SEP, act('closeTab', 'Close Tab')],
     },
     { role: 'editMenu' },
     {
-      label: 'View',
+      label: tr('View'),
       submenu: [act('toggleSidebar', 'Toggle Sidebar'), act('split', 'Split View'), act('notes', 'Notes'), SEP, act('reload', 'Reload'), act('hardReload', 'Hard Reload'), SEP, act('zoomIn', 'Zoom In'), act('zoomOut', 'Zoom Out'), act('zoomReset', 'Actual Size'), SEP, act('fullscreen', 'Enter Full Screen'), act('devtools', 'Developer Tools')],
     },
-    { label: 'History', submenu: [act('back', 'Back'), act('forward', 'Forward'), SEP, act('history', 'Show All History')] },
-    { label: 'Bookmarks', submenu: [act('bookmark', 'Bookmark This Page'), act('bookmarksPage', 'Show All Bookmarks')] },
+    { label: tr('History'), submenu: [act('back', 'Back'), act('forward', 'Forward'), SEP, act('history', 'Show All History')] },
+    { label: tr('Bookmarks'), submenu: [act('bookmark', 'Bookmark This Page'), act('bookmarksPage', 'Show All Bookmarks')] },
     { role: 'windowMenu', submenu: [{ role: 'minimize' }, { role: 'zoom' }, SEP, act('nextTab', 'Next Tab'), act('prevTab', 'Previous Tab'), SEP, { role: 'front' }] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-module.exports = { pageMenu, tabMenu, mainMenu, shieldMenu, workspaceMenu, workspaceSwitcher, allTabsMenu, bookmarkMenu, installAppMenu, openInternal };
+module.exports = { pageMenu, tabMenu, mainMenu, toolbarMenu, shieldMenu, workspaceMenu, workspaceSwitcher, allTabsMenu, bookmarkMenu, installAppMenu, openInternal };

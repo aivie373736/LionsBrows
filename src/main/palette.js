@@ -8,6 +8,7 @@ const bookmarks = require('./bookmarks');
 const workspaces = require('./workspaces');
 const { ACTIONS, run: runAction, shortcutLabel } = require('./actions');
 const { NEWTAB } = require('./tab');
+const { tr, locale } = require('./i18n');
 
 function matches(hay, words) {
   const h = (hay || '').toLowerCase();
@@ -15,20 +16,20 @@ function matches(hay, words) {
 }
 
 function formatNumber(n) {
-  return Math.abs(n) >= 1e15 || (Math.abs(n) < 1e-6 && n !== 0) ? n.toExponential(6) : n.toLocaleString('en-US', { maximumFractionDigits: 10 });
+  return Math.abs(n) >= 1e15 || (Math.abs(n) < 1e-6 && n !== 0) ? n.toExponential(6) : n.toLocaleString(locale(), { maximumFractionDigits: 10 });
 }
 
 function tabItem(win, t) {
   const ws = win.isPrivate ? null : ctx.workspace(t.workspaceId);
   const where = ws && ctx.workspaces().length > 1 ? `${ws.name} · ` : '';
-  return { type: 'tab', id: t.id, title: t.title || 'New Tab', subtitle: `${where}${omnibox.displayUrl(t.displayUrl) || 'New Tab'}`, favicon: t.favicon, dedupe: t.displayUrl };
+  return { type: 'tab', id: t.id, title: t.title || tr('New Tab'), subtitle: `${where}${omnibox.displayUrl(t.displayUrl) || tr('New Tab')}`, favicon: t.favicon, dedupe: t.displayUrl };
 }
 
 function commandItems(words, limit, includeHidden = false) {
   return Object.entries(ACTIONS)
-    .filter(([, a]) => (includeHidden || !a.hidden) && matches(a.title, words))
+    .filter(([, a]) => (includeHidden || !a.hidden) && matches(`${a.title} ${tr(a.title, a.vars)}`, words))
     .slice(0, limit)
-    .map(([id, a]) => ({ type: 'command', id, title: a.title, subtitle: shortcutLabel(id) }));
+    .map(([id, a]) => ({ type: 'command', id, title: tr(a.title, a.vars), subtitle: shortcutLabel(id) }));
 }
 
 function query(win, text, mode) {
@@ -68,12 +69,12 @@ function query(win, text, mode) {
   const engineName = engine(engineId).name;
 
   const value = omnibox.calculate(q);
-  if (value !== null) push({ type: 'calc', id: 'calc', title: `= ${formatNumber(value)}`, subtitle: 'Press Enter to copy the result', value: String(value) });
+  if (value !== null) push({ type: 'calc', id: 'calc', title: `= ${formatNumber(value)}`, subtitle: tr('Press Enter to copy the result'), value: String(value) });
 
   const cls = omnibox.classify(q, engineId);
-  if (cls.type === 'url') push({ type: 'url', title: omnibox.displayUrl(cls.url) || cls.url, subtitle: 'Open website', url: cls.url });
-  else if (cls.type === 'bang') push({ type: 'search', title: cls.query, subtitle: `Search ${cls.name}`, url: cls.url });
-  else push({ type: 'search', title: q, subtitle: `Search with ${engineName}`, url: cls.url });
+  if (cls.type === 'url') push({ type: 'url', title: omnibox.displayUrl(cls.url) || cls.url, subtitle: tr('Open website'), url: cls.url });
+  else if (cls.type === 'bang') push({ type: 'search', title: cls.query, subtitle: tr('Search {name}', { name: cls.name }), url: cls.url });
+  else push({ type: 'search', title: q, subtitle: tr('Search with {name}', { name: engineName }), url: cls.url });
 
   let tabCount = 0;
   for (const t of win.allTabs()) {
@@ -84,15 +85,15 @@ function query(win, text, mode) {
   }
   if (!win.isPrivate) {
     for (const w of ctx.workspaces()) {
-      if (w.id !== win.activeWorkspaceId && matches(`${w.name} workspace`, words)) {
-        push({ type: 'workspace', id: w.id, title: `Switch to ${w.name}`, subtitle: 'Workspace' });
+      if (w.id !== win.activeWorkspaceId && matches(`${w.name} workspace ${tr('Workspace')}`, words)) {
+        push({ type: 'workspace', id: w.id, title: tr('Switch to {name}', { name: w.name }), subtitle: tr('Workspace') });
       }
     }
   }
   for (const b of bookmarks.search(q, 4)) push({ type: 'bookmark', title: b.title, subtitle: omnibox.displayUrl(b.url), url: b.url, favicon: b.favicon });
   for (const h of ctx.history.search(q, 6)) push({ type: 'history', title: h.title || omnibox.displayUrl(h.url), subtitle: omnibox.displayUrl(h.url), url: h.url, favicon: h.favicon });
   commandItems(words, 4).forEach(push);
-  if (cls.type === 'url') push({ type: 'search', title: q, subtitle: `Search with ${engineName}`, url: searchUrl(engineId, q), dedupe: `search:${q}` });
+  if (cls.type === 'url') push({ type: 'search', title: q, subtitle: tr('Search with {name}', { name: engineName }), url: searchUrl(engineId, q), dedupe: `search:${q}` });
 
   return results.slice(0, 14);
 }
@@ -112,7 +113,7 @@ async function suggest(win, text) {
       .map((s) => (typeof s === 'string' ? s : s?.phrase))
       .filter((s) => s && s.toLowerCase() !== q.toLowerCase())
       .slice(0, 5)
-      .map((s) => ({ type: 'suggestion', title: s, subtitle: `Search with ${engine(searchEngine).name}`, url: searchUrl(searchEngine, s) }));
+      .map((s) => ({ type: 'suggestion', title: s, subtitle: tr('Search with {name}', { name: engine(searchEngine).name }), url: searchUrl(searchEngine, s) }));
   } catch {
     return [];
   } finally {

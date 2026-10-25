@@ -31,8 +31,8 @@ function renderEngineButton() {
   const engine = currentEngine();
   const btn = $('engine-btn');
   btn.replaceChildren(engineLogo(engine.id, engine.name), el('span', { html: icon('chevron-down', 14) }));
-  btn.title = `Search engine: ${engine.name}`;
-  $('search').placeholder = `Search ${engine.name} or type a URL`;
+  btn.title = tr('Search engine: {name}', { name: engine.name });
+  $('search').placeholder = tr('Search {name} or type a URL', { name: engine.name });
 }
 
 function closeEngineMenu() {
@@ -61,7 +61,7 @@ function openEngineMenu() {
     menu.append(item);
   }
   menu.append(el('div', { class: 'engine-sep' }));
-  const manage = el('button', { type: 'button', class: 'engine-item engine-manage' }, el('span', { class: 'name' }, 'Manage search engines'));
+  const manage = el('button', { type: 'button', class: 'engine-item engine-manage' }, el('span', { class: 'name' }, tr('Manage search engines')));
   manage.onclick = () => (location.href = 'lions://settings/#search');
   menu.append(manage);
   menu.hidden = false;
@@ -85,7 +85,7 @@ document.addEventListener('keydown', (e) => {
 
 function greeting(name) {
   const h = new Date().getHours();
-  const part = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  const part = h < 12 ? tr('Good morning') : h < 18 ? tr('Good afternoon') : tr('Good evening');
   return name ? `${part}, ${name}` : part;
 }
 
@@ -107,8 +107,8 @@ function siteTile(site) {
   }
   const remove = el('button', {
     class: 'remove',
-    title: 'Remove',
-    'aria-label': 'Remove',
+    title: tr('Remove'),
+    'aria-label': tr('Remove'),
     html: icon('x', 14),
     onclick: async (e) => {
       e.preventDefault();
@@ -165,9 +165,9 @@ async function render() {
 
   const greet = $('greeting');
   greet.hidden = !data.isPrivate && !s.showGreeting;
-  greet.textContent = data.isPrivate ? 'Private browsing' : greeting(s.greetingName);
+  greet.textContent = data.isPrivate ? tr('Private browsing') : greeting(s.greetingName);
   $('private-note').hidden = !data.isPrivate;
-  $('private-note').textContent = 'LionsBrows won’t keep your history, cookies or site data from this window after you close it. Downloads and bookmarks are kept.';
+  $('private-note').textContent = tr('LionsBrows won’t keep your history, cookies or site data from this window after you close it. Downloads and bookmarks are kept.');
   renderEngineButton();
 
   $('sites').replaceChildren(...data.topSites.map(siteTile));
@@ -175,7 +175,7 @@ async function render() {
   const stats = $('stats');
   stats.textContent = '';
   if (s.showBlockedStats && s.adblock && !data.isPrivate && data.blocked > 0) {
-    stats.innerHTML = `${icon('shield-check', 14)}<span>${data.blocked.toLocaleString()} trackers and ads blocked</span>`;
+    stats.innerHTML = `${icon('shield-check', 14)}<span>${tr('{n} trackers and ads blocked', { n: data.blocked.toLocaleString(LOCALE) })}</span>`;
   }
   if (!$('customize').hidden) renderCustomize();
 }
@@ -189,7 +189,7 @@ function toggleRow(label, key) {
   const input = el('input', { type: 'checkbox' });
   input.checked = Boolean(data.settings[key]);
   input.addEventListener('change', () => update({ [key]: input.checked }));
-  return el('div', { class: 'cz-toggle' }, el('span', {}, label), el('label', { class: 'switch' }, input, el('span')));
+  return el('div', { class: 'cz-toggle' }, el('span', {}, tr(label)), el('label', { class: 'switch' }, input, el('span')));
 }
 
 function slider(label, key, min, max, step, format) {
@@ -214,7 +214,7 @@ function renderCustomize() {
     if (onClick) b.addEventListener('click', onClick);
     return b;
   };
-  const colorInput = el('input', { type: 'color', value: s.ntBackgroundColor, title: 'Choose a color' });
+  const colorInput = el('input', { type: 'color', value: s.ntBackgroundColor, title: tr('Choose a color') });
   colorInput.addEventListener('input', () => applyBackground({ ...bg, type: 'color', color: colorInput.value }, false));
   colorInput.addEventListener('change', () => update({ ntBackground: 'color', ntBackgroundColor: colorInput.value }));
   const choose = (kind) => async () => {
@@ -227,47 +227,47 @@ function renderCustomize() {
   };
 
   body.append(
-    el('div', { class: 'cz-title' }, 'Background'),
+    el('div', { class: 'cz-title' }, tr('Background')),
     el(
       'div',
       { class: 'bg-options' },
-      option('default', 'None', 'circle-x', () => update({ ntBackground: 'default' })),
-      option('color', 'Color', 'palette', null, colorInput),
-      option('image', 'Image', 'image', choose('image')),
-      option('video', 'Video', 'film', choose('video')),
+      option('default', tr('None'), 'circle-x', () => update({ ntBackground: 'default' })),
+      option('color', tr('Color'), 'palette', null, colorInput),
+      option('image', tr('Image'), 'image', choose('image')),
+      option('video', tr('Video'), 'film', choose('video')),
     ),
   );
   if (bg.type === 'image' || bg.type === 'video') {
     body.append(
-      el('div', { class: 'bg-file' }, `A copy of your ${bg.type} is stored in your LionsBrows profile.`),
-      slider('Dim', 'ntBackgroundDim', 0, 0.9, 0.05, (v) => `${Math.round(v * 100)}%`),
-      slider('Blur', 'ntBackgroundBlur', 0, 40, 1, (v) => `${v}px`),
+      el('div', { class: 'bg-file' }, bg.type === 'video' ? tr('A copy of your video is stored in your LionsBrows profile.') : tr('A copy of your image is stored in your LionsBrows profile.')),
+      slider(tr('Dim'), 'ntBackgroundDim', 0, 0.9, 0.05, (v) => `${Math.round(v * 100)}%`),
+      slider(tr('Blur'), 'ntBackgroundBlur', 0, 40, 1, (v) => `${v}px`),
     );
   }
 
   const swatches = el('div', { class: 'cz-swatches' });
   for (const [name, color] of Object.entries(data.accents)) {
     const on = s.accent.toLowerCase() === color;
-    const b = el('button', { type: 'button', class: `cz-swatch${on ? ' on' : ''}`, title: name[0].toUpperCase() + name.slice(1), 'aria-label': name, style: `background:${color}` });
+    const b = el('button', { type: 'button', class: `cz-swatch${on ? ' on' : ''}`, title: tr(name[0].toUpperCase() + name.slice(1)), 'aria-label': tr(name[0].toUpperCase() + name.slice(1)), style: `background:${color}` });
     b.addEventListener('click', () => update({ accent: color }));
     swatches.append(b);
   }
-  const customAccent = el('input', { type: 'color', value: s.accent, title: 'Custom color' });
+  const customAccent = el('input', { type: 'color', value: s.accent, title: tr('Custom color') });
   customAccent.addEventListener('input', () => applyAccent(customAccent.value));
   customAccent.addEventListener('change', () => update({ accent: customAccent.value }));
   const isCustom = !Object.values(data.accents).includes(s.accent.toLowerCase());
-  const custom = el('label', { class: `cz-swatch custom${isCustom ? ' on' : ''}`, title: 'Custom color', html: icon('plus', 14) });
+  const custom = el('label', { class: `cz-swatch custom${isCustom ? ' on' : ''}`, title: tr('Custom color'), html: icon('plus', 14) });
   custom.append(customAccent);
   swatches.append(custom);
 
   body.append(
-    el('div', { class: 'cz-title' }, 'Accent color'),
+    el('div', { class: 'cz-title' }, tr('Accent color')),
     swatches,
-    el('div', { class: 'cz-title' }, 'Show'),
+    el('div', { class: 'cz-title' }, tr('Show')),
     toggleRow('Shortcuts', 'showTopSites'),
     toggleRow('Greeting', 'showGreeting'),
     toggleRow('Blocked trackers count', 'showBlockedStats'),
-    el('a', { class: 'cz-link', href: 'lions://settings/#appearance' }, 'All appearance settings'),
+    el('a', { class: 'cz-link', href: 'lions://settings/#appearance' }, tr('All appearance settings')),
   );
 }
 

@@ -207,6 +207,10 @@ main {
   border-color: var(--danger);
   color: var(--danger);
 }
+.button:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
 select,
 input[type='text'] {
   height: 40px;

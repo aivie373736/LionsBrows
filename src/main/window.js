@@ -8,6 +8,7 @@ const omnibox = require('./omnibox');
 const adblock = require('./adblock');
 const downloads = require('./downloads');
 const bookmarks = require('./bookmarks');
+const i18n = require('./i18n');
 
 const UI_PRELOAD = path.join(__dirname, '..', 'preload', 'ui.js');
 const UI_HTML = path.join(__dirname, '..', 'ui', 'index.html');
@@ -98,7 +99,7 @@ class BrowserWin {
       minWidth: 560,
       minHeight: 380,
       show: false,
-      title: this.isPrivate ? 'LionsBrows (Private)' : 'LionsBrows',
+      title: this.isPrivate ? `LionsBrows (${i18n.tr('Private')})` : 'LionsBrows',
       backgroundColor: c.bg,
       titleBarStyle: 'hidden',
       icon: ICON,
@@ -113,7 +114,7 @@ class BrowserWin {
     this.ui = new WebContentsView({ webPreferences: { preload: UI_PRELOAD, sandbox: true, contextIsolation: true, spellcheck: false } });
     this.ui.setBackgroundColor(c.bg);
     this.win.contentView.addChildView(this.ui);
-    this.ui.webContents.loadFile(UI_HTML, { query: { private: this.isPrivate ? '1' : '0', platform: process.platform } });
+    this.ui.webContents.loadFile(UI_HTML, { query: { private: this.isPrivate ? '1' : '0', platform: process.platform, lang: i18n.lang() } });
     this.ui.webContents.on('before-input-event', (event, input) => require('./shortcuts').handle(this, input, event));
     this.ui.webContents.once('did-finish-load', () => this.#show());
     setTimeout(() => this.#show(), 2500);
@@ -642,7 +643,7 @@ class BrowserWin {
     this.overlay = new WebContentsView({ webPreferences: { preload: UI_PRELOAD, sandbox: true, contextIsolation: true, transparent: true, spellcheck: false } });
     this.overlay.setBackgroundColor('#00000000');
     this.overlayReady = new Promise((resolve) => this.overlay.webContents.once('did-finish-load', resolve));
-    this.overlay.webContents.loadFile(OVERLAY_HTML, { query: { platform: process.platform } });
+    this.overlay.webContents.loadFile(OVERLAY_HTML, { query: { platform: process.platform, lang: i18n.lang() } });
     this.overlay.webContents.on('before-input-event', (event, input) => require('./shortcuts').handle(this, input, event, { overlay: true }));
     return this.overlayReady;
   }
@@ -725,6 +726,8 @@ class BrowserWin {
       };
     }
     const settings = ctx.settings();
+    const dl = downloads.summary();
+    const update = require('./updater').state();
     return {
       isPrivate: this.isPrivate,
       platform: process.platform,
@@ -747,9 +750,15 @@ class BrowserWin {
       panes: (this.panes || []).map((p) => ({ ...p, focused: p.tabId === s.activeId })),
       nav,
       find: { ...this.find },
-      downloads: downloads.summary(),
+      downloads: dl,
+      toolbar: {
+        split: settings.showSplitButton || Boolean(s.split),
+        notes: settings.showNotesButton || this.panel === 'notes',
+        downloads: settings.downloadsButton === 'always' || dl.session > 0 || this.panel === 'downloads',
+      },
       downloadList: this.panel === 'downloads' ? downloads.list().slice(0, 40) : [],
       canReopen: this.closed.length > 0,
+      update: update.status === 'ready' || update.status === 'available' ? { status: update.status, version: update.version } : null,
     };
   }
 
@@ -763,7 +772,7 @@ class BrowserWin {
       const state = this.state();
       wc.send('ui:state', state);
       const title = state.nav?.title ? `${state.nav.title} - LionsBrows` : 'LionsBrows';
-      if (this.win.getTitle() !== title) this.win.setTitle(this.isPrivate ? `${title} (Private)` : title);
+      if (this.win.getTitle() !== title) this.win.setTitle(this.isPrivate ? `${title} (${i18n.tr('Private')})` : title);
     });
   }
 

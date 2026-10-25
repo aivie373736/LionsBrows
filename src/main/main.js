@@ -30,7 +30,13 @@ function savedSettings() {
   }
 }
 
-const lowEndSetting = savedSettings().lowEndMode || 'auto';
+const saved = savedSettings();
+const i18n = require('./i18n');
+i18n.configure(saved.language);
+if (saved.language === 'de') app.commandLine.appendSwitch('lang', 'de');
+else if (saved.language === 'en') app.commandLine.appendSwitch('lang', 'en-US');
+
+const lowEndSetting = saved.lowEndMode || 'auto';
 const lowEndMode = lowEndSetting === 'on' || (lowEndSetting === 'auto' && os.totalmem() <= 4 * 1024 ** 3);
 if (lowEndMode) {
   app.commandLine.appendSwitch('enable-low-end-device-mode');
@@ -99,16 +105,16 @@ async function start() {
   sessions.init();
   menus.installAppMenu();
   ipc.init();
-  adblock.init().catch((err) => console.warn('[adblock]', err.message));
-
   const saved = sessionStore.saved();
   if (saved.length) {
     saved.forEach((restore, i) => new BrowserWin({ restore, urls: i === 0 ? pendingUrls : [] }));
   } else {
     new BrowserWin({ urls: pendingUrls });
   }
+  setImmediate(() => adblock.init().catch((err) => console.warn('[adblock]', err.message)));
 
   require('./memory').start();
+  require('./updater').start();
 
   nativeTheme.on('updated', () => {
     for (const w of ctx.windows) w.applyTheme();
@@ -143,6 +149,10 @@ async function start() {
   ctx.events.on('download-started', () => {
     const w = ctx.lastFocusedWindow();
     if (w && w.panel !== 'downloads') w.togglePanel('downloads');
+  });
+  ctx.events.on('update-changed', () => {
+    for (const w of ctx.windows) w.scheduleState();
+    internalApi.broadcast('update-changed');
   });
   ctx.events.on('workspaces-changed', () => {
     for (const w of ctx.windows) w.scheduleState();

@@ -3,7 +3,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { app, ipcMain, net, webContents } = require('electron');
-const { ElectronBlocker, Request } = require('@ghostery/adblocker-electron');
 const { ctx } = require('./context');
 
 const PRELOAD_PATH = require.resolve('@ghostery/adblocker-electron-preload');
@@ -11,6 +10,12 @@ const REFRESH_AFTER = 3 * 86_400_000;
 
 let blocker = null;
 let cacheFile = null;
+let lib = null;
+
+function ghostery() {
+  if (!lib) lib = require('@ghostery/adblocker-electron');
+  return lib;
+}
 
 const fetchImpl = (url, init) => net.fetch(url, init);
 
@@ -26,7 +31,7 @@ async function init() {
 
   try {
     const buf = await fs.promises.readFile(cacheFile);
-    blocker = ElectronBlocker.deserialize(new Uint8Array(buf));
+    blocker = ghostery().ElectronBlocker.deserialize(new Uint8Array(buf));
     const age = Date.now() - (await fs.promises.stat(cacheFile)).mtimeMs;
     if (age > REFRESH_AFTER) refresh();
   } catch {
@@ -36,7 +41,7 @@ async function init() {
 
 async function refresh() {
   try {
-    const fresh = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetchImpl);
+    const fresh = await ghostery().ElectronBlocker.fromPrebuiltAdsAndTracking(fetchImpl);
     blocker = fresh;
     await fs.promises.writeFile(cacheFile, fresh.serialize());
   } catch (err) {
@@ -84,7 +89,7 @@ function onBeforeRequest(details, callback) {
   const topUrl = topUrlOf(details.webContentsId);
   if (!topUrl.startsWith('http') || !isActiveFor(topUrl)) return callback({});
 
-  const request = Request.fromRawDetails({
+  const request = ghostery().Request.fromRawDetails({
     requestId: `${details.id}`,
     sourceUrl: details.frame?.url || topUrl,
     tabId: details.webContentsId,

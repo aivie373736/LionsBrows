@@ -29,6 +29,11 @@ const PAGES = {
         <script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
         <script src="https://www.google-analytics.com/analytics.js"></script>`,
   '/two': `<title>Page Two</title><p>second page</p>`,
+  '/article': `<title>All about lions</title><header><nav><a href="/">Home</a> <a href="/two">Two</a></nav></header>
+        <article><h1>All about lions</h1><p class="byline">By Leo Roar</p>
+        ${Array.from({ length: 8 }, (_, i) => `<p>${'The lion is a large cat of the genus Panthera native to Africa and India. It has a muscular, broad-chested body, a short rounded head, round ears and a hairy tuft at the end of its tail. '.repeat(3)} Paragraph ${i + 1}.</p>`).join('')}
+        <p><img src="/lion.png" onerror="window.pwned = 1" alt="A lion"></p><script>window.inlineRan = 1</script></article>
+        <footer>Copyright</footer>`,
   '/opener': `<title>Opener</title><script>window.openedOk = () => !!window.opener;</script>`,
   '/download': null,
 };
@@ -80,7 +85,7 @@ async function launch() {
   });
   app.process().stderr.on('data', (d) => {
     const text = String(d);
-    if (/\[main\]|Error:/.test(text) && !/Failed to load URL/.test(text)) {
+    if (/\[main\]|Error:/.test(text) && !/Failed to load URL|Error: Not allowed/.test(text)) {
       mainErrors.push(text.trim());
       process.stdout.write(`    [main] ${text}`);
     }
@@ -136,6 +141,9 @@ await step('starts with a new tab page and the UI', async () => {
   const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
   await ui.waitForSelector('.tab.active');
   assert.equal(await ui.textContent('.tab.active .title'), 'New Tab');
+  for (const id of ['ws-button', 'btn-split', 'btn-notes', 'btn-downloads', 'btn-alltabs']) {
+    assert.equal(await ui.$eval(`#${id}`, (e) => e.hidden), true, `#${id} hidden by default`);
+  }
   const nt = await pageFor(app, (u) => u.startsWith('lions://newtab'));
   await nt.waitForSelector('#search');
   await main((ctx, r, w, dir) => ctx.setSetting('downloadsPath', dir), downloadsDir);
@@ -267,6 +275,30 @@ await step('memory saver keeps only a few background tabs awake', async () => {
   await main((ctx) => ctx.setSetting('memorySaver', 'auto'));
 });
 
+await step('reader view shows a clean, safe version of articles', async () => {
+  await main((ctx, r, w, url) => w.openUrl(url), `${BASE}/article`);
+  await until(() => main((ctx, r, w) => w.activeTab().readerable), 'article is readerable');
+  const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
+  await until(() => ui.$eval('#addr-reader', (e) => !e.hidden), 'reader button shown');
+  await main((ctx, r, w) => r('./actions').run('reader', w));
+  await until(() => main((ctx, r, w) => w.activeTab().url.startsWith('lions://reader')), 'reader opened');
+  assert.equal(await main((ctx, r, w) => w.activeTab().displayUrl), `${BASE}/article`);
+  const page = await activePage(app, main);
+  await page.waitForSelector('#article:not([hidden]) #content p');
+  assert.equal(await page.textContent('#title'), 'All about lions');
+  assert.equal(await page.$$eval('#content script, #content [onerror]', (n) => n.length), 0);
+  assert.equal(await page.evaluate(() => window.pwned || null), null);
+  assert.equal(await page.evaluate(() => typeof window.lions.call), 'function');
+  await assert.rejects(page.evaluate(() => window.lions.call('historyList', {})));
+  await page.click('[data-theme="sepia"]', { force: true });
+  await until(() => main((ctx) => ctx.settings().readerTheme === 'sepia'), 'reader theme saved');
+  await wait(300);
+  shot('05b-reader');
+  await main((ctx) => ctx.setSetting('readerTheme', 'auto'));
+  await main((ctx, r, w) => r('./actions').run('reader', w));
+  await until(() => main((ctx, r, w, url) => w.activeTab().url === url, `${BASE}/article`), 'back to the article');
+});
+
 await step('bookmarks', async () => {
   await main((ctx, r) => r('./actions').run('bookmark', ctx.lastFocusedWindow()));
   assert.equal(await main((ctx, r, w) => r('./bookmarks').has(w.activeTab().displayUrl)), true);
@@ -363,6 +395,8 @@ await step('downloads save to the downloads folder', async () => {
   await main((ctx, r, w, url) => w.activeTab().wc.downloadURL(url), `${BASE}/download`);
   await until(() => main((ctx, r) => r('./downloads').list().some((d) => d.state === 'completed')), 'download done');
   assert.ok(fs.existsSync(path.join(downloadsDir, 'roar.txt')));
+  const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
+  await until(() => ui.$eval('#btn-downloads', (e) => !e.hidden), 'downloads button appears');
   await wait(300);
   shot('10-downloads');
   await main((ctx, r, w) => w.panel && w.togglePanel(w.panel));
@@ -419,6 +453,27 @@ await step('session is restored after a restart', async () => {
   const after = await until(() => main((ctx, r, w) => w.space().tabs.length && w.space().tabs.map((t) => t.displayUrl)), 'restored');
   assert.deepEqual(after, before);
   assert.ok(await main((ctx, r) => r('./bookmarks').all().length === 1), 'bookmark persisted');
+});
+
+await step('switching the language to German translates the browser after a restart', async () => {
+  await main((ctx) => ctx.setSetting('language', 'de'));
+  await main((ctx) => ctx.flushAll());
+  await app.close();
+  ({ app, main } = await launch());
+  const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
+  await until(async () => (await ui.getAttribute('#addr-reader', 'title')) === 'Leseansicht', 'toolbar in German');
+  await main((ctx, r, w) => r('./actions').run('settings', w));
+  const settings = await pageFor(app, (u) => u.startsWith('lions://settings'));
+  await settings.waitForSelector('#general .section-title');
+  assert.equal((await settings.textContent('#general .section-title')).trim(), 'Allgemein');
+  assert.equal(await settings.evaluate(() => document.documentElement.lang), 'de');
+  await wait(400);
+  shot('16-german-settings');
+  await main((ctx, r, w) => w.newTab());
+  const nt = await activePage(app, main);
+  await nt.waitForSelector('#search');
+  assert.match(await nt.getAttribute('#search', 'placeholder'), /suchen/);
+  await main((ctx) => ctx.setSetting('language', 'auto'));
 });
 
 await app.close();

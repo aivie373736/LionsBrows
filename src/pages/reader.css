@@ -1,0 +1,223 @@
+:root {
+  --reader-size: 20px;
+  --reader-bg: #ffffff;
+  --reader-text: #1c1b22;
+  --reader-muted: #6b6a73;
+  --reader-rule: rgba(28, 27, 34, 0.12);
+  --reader-serif: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif;
+}
+:root[data-theme='sepia'] {
+  --reader-bg: #f4ecd8;
+  --reader-text: #5b4636;
+  --reader-muted: #8a7461;
+  --reader-rule: rgba(91, 70, 54, 0.18);
+}
+:root[data-theme='dark'] {
+  --reader-bg: #1c1b22;
+  --reader-text: #e9e8ee;
+  --reader-muted: #a3a1ad;
+  --reader-rule: rgba(233, 232, 238, 0.14);
+}
+
+html {
+  background: var(--reader-bg);
+}
+body {
+  margin: 0;
+  background: var(--reader-bg);
+  color: var(--reader-text);
+  font-family: var(--reader-serif);
+  font-size: var(--reader-size);
+  line-height: 1.65;
+  transition: background 0.15s, color 0.15s;
+}
+:root[data-font='sans'] body {
+  font-family: var(--font);
+  line-height: 1.6;
+}
+
+#article {
+  max-width: 34em;
+  margin: 0 auto;
+  padding: 72px 28px 120px;
+}
+.site {
+  display: inline-block;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--reader-muted);
+  text-decoration: none;
+}
+.site:hover {
+  text-decoration: underline;
+}
+h1#title {
+  font-family: var(--font);
+  font-size: 1.75em;
+  line-height: 1.2;
+  font-weight: 650;
+  margin: 10px 0 12px;
+}
+.meta {
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--reader-muted);
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--reader-rule);
+  margin-bottom: 30px;
+}
+
+#content a {
+  color: inherit;
+  text-decoration-color: var(--reader-muted);
+  text-underline-offset: 3px;
+}
+#content a:hover {
+  text-decoration-color: currentColor;
+}
+#content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.4em auto;
+  border-radius: 6px;
+}
+#content figure {
+  margin: 1.6em 0;
+}
+#content figcaption {
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--reader-muted);
+  text-align: center;
+}
+#content h2,
+#content h3,
+#content h4 {
+  font-family: var(--font);
+  line-height: 1.3;
+  margin: 1.6em 0 0.5em;
+}
+#content blockquote {
+  margin: 1.4em 0;
+  padding-left: 1em;
+  border-left: 3px solid var(--reader-rule);
+  color: var(--reader-muted);
+}
+#content pre,
+#content code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+}
+#content pre {
+  overflow-x: auto;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--reader-rule);
+}
+#content table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9em;
+}
+#content th,
+#content td {
+  border: 1px solid var(--reader-rule);
+  padding: 6px 10px;
+}
+#content hr {
+  border: 0;
+  border-top: 1px solid var(--reader-rule);
+  margin: 2em 0;
+}
+
+.tools {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--reader-bg);
+  border: 1px solid var(--reader-rule);
+  font-family: var(--font);
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.tools:hover,
+.tools:focus-within {
+  opacity: 1;
+}
+.tool,
+.dot {
+  border: 0;
+  background: transparent;
+  color: var(--reader-text);
+  cursor: pointer;
+}
+.tool {
+  height: 30px;
+  min-width: 30px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+}
+.tool:hover {
+  background: var(--reader-rule);
+}
+.tool.font {
+  font-family: var(--reader-serif);
+}
+.tool.font.sans {
+  font-family: var(--font);
+}
+.tool.on {
+  background: var(--reader-rule);
+  font-weight: 650;
+}
+.sep {
+  width: 1px;
+  height: 18px;
+  background: var(--reader-rule);
+  margin: 0 4px;
+}
+.dot {
+  width: 22px;
+  height: 22px;
+  margin: 0 2px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+.dot.auto {
+  background: linear-gradient(135deg, #ffffff 50%, #1c1b22 50%);
+}
+.dot.light {
+  background: #ffffff;
+}
+.dot.sepia {
+  background: #f4ecd8;
+}
+.dot.dark {
+  background: #1c1b22;
+}
+.dot.on {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.missing {
+  font-family: var(--font);
+  text-align: center;
+  color: var(--reader-muted);
+  margin-top: 30vh;
+}
+
+@media print {
+  .tools {
+    display: none;
+  }
+}

@@ -64,6 +64,17 @@ body.v.collapsed {
   color: var(--accent);
   background: var(--accent-soft);
 }
+.btn.badge::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 2px var(--toolbar);
+}
 .btn:focus-visible,
 #address:focus-visible,
 .tab:focus-visible,
@@ -273,6 +284,10 @@ body.h .tb-center {
 }
 #addr-star.on svg {
   fill: currentColor;
+}
+#addr-reader.on {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 #private-chip {

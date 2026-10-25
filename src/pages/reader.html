@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Reader view</title>
+    <link rel="stylesheet" href="lions://assets/theme.css" />
+    <link rel="stylesheet" href="reader.css" />
+  </head>
+  <body>
+    <div class="tools" role="toolbar" aria-label="Reader settings">
+      <button class="tool" id="smaller" title="Smaller text" aria-label="Smaller text"></button>
+      <button class="tool" id="bigger" title="Larger text" aria-label="Larger text"></button>
+      <span class="sep"></span>
+      <button class="tool font" data-font="serif" title="Serif">Aa</button>
+      <button class="tool font sans" data-font="sans" title="Sans serif">Aa</button>
+      <span class="sep"></span>
+      <button class="dot auto" data-theme="auto" title="Automatic" aria-label="Automatic"></button>
+      <button class="dot light" data-theme="light" title="Light" aria-label="Light"></button>
+      <button class="dot sepia" data-theme="sepia" title="Sepia" aria-label="Sepia"></button>
+      <button class="dot dark" data-theme="dark" title="Dark" aria-label="Dark"></button>
+    </div>
+    <article id="article" hidden>
+      <a class="site" id="site"></a>
+      <h1 id="title"></h1>
+      <div class="meta" id="meta"></div>
+      <div id="content"></div>
+    </article>
+    <p class="missing" id="missing" hidden>This article is no longer available.</p>
+    <script src="lions://assets/icons.js"></script>
+    <script src="lions://assets/strings.js"></script>
+    <script src="lions://assets/i18n.js"></script>
+    <script src="reader.js"></script>
+  </body>
+</html>

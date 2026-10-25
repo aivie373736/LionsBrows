@@ -35,9 +35,11 @@ const UI = {
   workspaceMenu: (w, id, x, y) => menus.workspaceMenu(w, id, x, y),
   workspaceSwitcher: (w, x, y) => menus.workspaceSwitcher(w, x, y),
   allTabsMenu: (w, x, y) => menus.allTabsMenu(w, x, y),
+  toolbarMenu: (w, x, y) => menus.toolbarMenu(w, x, y),
   bookmarkMenu: (w, id) => menus.bookmarkMenu(w, id),
   openBookmark: (w, url, newTab) => /^https?:/i.test(String(url)) && w.openUrl(String(url), { newTab: Boolean(newTab), background: Boolean(newTab) }),
   toggleBookmark: (w) => run('bookmark', w),
+  toggleReader: (w) => run('reader', w),
   toggleMute: (w, id) => {
     const t = w.tabById(id);
     if (t) t.setMuted(!t.muted);

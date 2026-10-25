@@ -11,6 +11,7 @@ const downloads = require('./downloads');
 const permissions = require('./permissions');
 const extensions = require('./extensions');
 const adblock = require('./adblock');
+const { tr } = require('./i18n');
 
 const ENUMS = {
   startup: ['restore', 'newtab'],
@@ -19,11 +20,16 @@ const ENUMS = {
   memorySaver: ['auto', 'balanced', 'maximum', 'off'],
   lowEndMode: ['auto', 'on', 'off'],
   ntBackground: ['default', 'color', 'image', 'video'],
+  downloadsButton: ['auto', 'always'],
+  language: ['auto', 'en', 'de'],
+  readerFont: ['serif', 'sans'],
+  readerTheme: ['auto', 'light', 'sepia', 'dark'],
 };
 
 const RANGES_NUM = {
   ntBackgroundDim: [0, 0.9],
   ntBackgroundBlur: [0, 40],
+  readerSize: [14, 32],
 };
 
 const BACKGROUND_TYPES = {
@@ -40,7 +46,7 @@ function validate(key, value) {
   if ((key === 'accent' || key === 'ntBackgroundColor') && !HEX.test(value)) throw new Error('Invalid color');
   if (key === 'frameColor' && value !== '' && !HEX.test(value)) throw new Error('Invalid color');
   if (key === 'ntBackgroundFile' && value !== '') throw new Error('Use chooseBackground');
-  if (key === 'customSearchUrl' && value !== '' && !searchEngines.isValidTemplate(value)) throw new Error('The address must start with http and contain %s');
+  if (key === 'customSearchUrl' && value !== '' && !searchEngines.isValidTemplate(value)) throw new Error(tr('The address must start with http and contain %s'));
   if (key === 'greetingName' || key === 'customSearchName') return value.slice(0, 40);
   return value;
 }
@@ -115,8 +121,8 @@ const API = {
     if (!BACKGROUND_TYPES[kind]) throw new Error('Unknown background type');
     const { w } = findTab(sender);
     const { canceled, filePaths } = await dialog.showOpenDialog(w?.win, {
-      title: kind === 'video' ? 'Choose a video for the new tab page' : 'Choose an image for the new tab page',
-      filters: [{ name: kind === 'video' ? 'Videos' : 'Images', extensions: BACKGROUND_TYPES[kind] }],
+      title: kind === 'video' ? tr('Choose a video for the new tab page') : tr('Choose an image for the new tab page'),
+      filters: [{ name: kind === 'video' ? tr('Videos') : tr('Images'), extensions: BACKGROUND_TYPES[kind] }],
       properties: ['openFile'],
     });
     if (canceled || !filePaths[0]) return backgroundInfo();
@@ -196,7 +202,7 @@ const API = {
   },
   async bookmarksImport(sender) {
     const { w } = findTab(sender);
-    const { canceled, filePaths } = await dialog.showOpenDialog(w?.win, { filters: [{ name: 'Bookmarks (HTML)', extensions: ['html', 'htm'] }], properties: ['openFile'] });
+    const { canceled, filePaths } = await dialog.showOpenDialog(w?.win, { filters: [{ name: tr('Bookmarks (HTML)'), extensions: ['html', 'htm'] }], properties: ['openFile'] });
     if (canceled || !filePaths[0]) return 0;
     return bookmarks.importHtml(fs.readFileSync(filePaths[0], 'utf8'));
   },
@@ -206,6 +212,18 @@ const API = {
     if (canceled || !filePath) return false;
     fs.writeFileSync(filePath, exportBookmarksHtml());
     return true;
+  },
+
+  importSources() {
+    return require('./importer')
+      .sources()
+      .map((s) => ({ id: s.id, label: s.label, browser: s.browser }));
+  },
+  async importRun(_s, id, opts = {}) {
+    return require('./importer').run(String(id), { bookmarks: opts.bookmarks !== false, history: opts.history !== false }, {
+      addBookmarks: (list) => bookmarks.addMany(list),
+      addHistory: (rows) => ctx.history.importVisits(rows),
+    });
   },
 
   downloadsList() {
@@ -249,7 +267,7 @@ const API = {
   },
   async extensionsAdd(sender) {
     const { w } = findTab(sender);
-    const { canceled, filePaths } = await dialog.showOpenDialog(w?.win, { title: 'Choose an unpacked extension folder', properties: ['openDirectory'] });
+    const { canceled, filePaths } = await dialog.showOpenDialog(w?.win, { title: tr('Choose an unpacked extension folder'), properties: ['openDirectory'] });
     if (canceled || !filePaths[0]) return extensions.list();
     await extensions.add(filePaths[0], persistentSessions());
     return extensions.list();
@@ -269,6 +287,16 @@ const API = {
       platform: `${process.platform} ${process.arch}`,
       isDefault: app.isDefaultProtocolClient('https'),
     };
+  },
+
+  updateState() {
+    return require('./updater').state();
+  },
+  updateCheck() {
+    return require('./updater').check();
+  },
+  updateInstall() {
+    require('./updater').install();
   },
 
   makeDefaultBrowser() {
@@ -303,7 +331,11 @@ const API = {
     const { ACTIONS, shortcutLabel } = require('./actions');
     return Object.entries(ACTIONS)
       .filter(([, a]) => a.keys && a.keys.length)
-      .map(([id, a]) => ({ title: a.title, keys: shortcutLabel(id) }));
+      .map(([id, a]) => ({ title: tr(a.title, a.vars), keys: shortcutLabel(id) }));
+  },
+
+  readerArticle(_s, id) {
+    return require('./reader').article(id);
   },
 
   bangs() {
@@ -311,9 +343,16 @@ const API = {
   },
 };
 
+const LIMITED = {
+  reader: ['getSettings', 'setSettings', 'readerArticle'],
+  error: ['getSettings'],
+};
+
 async function call(event, method, ...args) {
   const url = event.senderFrame?.url || '';
   if (!url.startsWith('lions://')) throw new Error('Not allowed');
+  const allowed = LIMITED[new URL(url).hostname];
+  if (allowed && !allowed.includes(method)) throw new Error('Not allowed');
   const fn = API[method];
   if (typeof fn !== 'function') throw new Error(`Unknown method ${method}`);
   return fn(event.sender, ...args);

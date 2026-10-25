@@ -28,13 +28,14 @@ $('#hnew').innerHTML = icon('plus');
 $('#btn-alltabs').innerHTML = icon('chevron-down', 16);
 $('#btn-settings').innerHTML = icon('settings');
 $('#addr-star').innerHTML = icon('star', 16);
+$('#addr-reader').innerHTML = icon('book-open', 16);
 $('#find-prev').innerHTML = icon('chevron-down', 16, 'flip');
 $('#find-prev').firstChild.style.transform = 'rotate(180deg)';
 $('#find-next').innerHTML = icon('chevron-down', 16);
 $('#find-close').innerHTML = icon('x', 16);
 $('#panel-close').innerHTML = icon('x', 16);
-$('#new-tab').innerHTML = `${icon('plus')}<span>New tab</span><kbd>${isMac ? '⌘T' : 'Ctrl+T'}</kbd>`;
-$('#private-chip').innerHTML = `${icon('eye-off', 14)}Private`;
+$('#new-tab').innerHTML = `${icon('plus')}<span>${tr('New tab')}</span><kbd>${isMac ? '⌘T' : 'Ctrl+T'}</kbd>`;
+$('#private-chip').innerHTML = `${icon('eye-off', 14)}${tr('Private')}`;
 
 function updateWindowControls() {
   if (isMac) return;
@@ -74,7 +75,7 @@ function formatBytes(n) {
   if (!n) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
-  return `${(n / 1024 ** i).toFixed(i ? 1 : 0)} ${units[i]}`;
+  return `${(n / 1024 ** i).toLocaleString(LOCALE, { maximumFractionDigits: i ? 1 : 0 })} ${units[i]}`;
 }
 
 function anchor(button, alignRight = false) {
@@ -95,6 +96,21 @@ $('#new-tab').onclick = () => cmd('newTab');
 $('#hnew').onclick = () => cmd('newTab');
 $('#btn-alltabs').onclick = (e) => cmd('allTabsMenu', ...anchor(e.currentTarget, true));
 $('#ws-button').onclick = (e) => cmd('workspaceSwitcher', ...anchor(e.currentTarget));
+function updateTabOverflow() {
+  const strip = $('#htabs');
+  $('#btn-alltabs').hidden = strip.scrollWidth <= strip.clientWidth + 1;
+}
+new ResizeObserver(updateTabOverflow).observe($('#htabs'));
+new ResizeObserver(updateTabOverflow).observe($('#hlist'));
+
+for (const bar of ['#toolbar', '#tabstrip']) {
+  $(bar).addEventListener('contextmenu', (e) => {
+    if (e.target.closest('#address, .tab, .pin, #ws-button')) return;
+    e.preventDefault();
+    cmd('toolbarMenu', e.clientX, e.clientY);
+  });
+}
+
 $('#htabs').addEventListener(
   'wheel',
   (e) => {
@@ -123,6 +139,10 @@ $('#addr-star').onclick = (e) => {
   e.stopPropagation();
   cmd('toggleBookmark');
 };
+$('#addr-reader').onclick = (e) => {
+  e.stopPropagation();
+  cmd('toggleReader');
+};
 $('#addr-zoom').onclick = (e) => {
   e.stopPropagation();
   cmd('zoomReset');
@@ -135,7 +155,7 @@ function renderAddress(nav) {
   ico.className = '';
   if (!nav || !nav.display) {
     ico.innerHTML = icon('search', 15);
-    text.append(el('span', 'placeholder', 'Search or enter address'));
+    text.append(el('span', 'placeholder', tr('Search or enter address')));
   } else if (nav.internal) {
     ico.innerHTML = `<img src="${LOGO}" width="16" height="16" alt="">`;
     text.append(el('span', 'host', nav.display.replace(/\/$/, '')));
@@ -145,21 +165,25 @@ function renderAddress(nav) {
     const slash = nav.display.indexOf('/');
     const host = slash === -1 ? nav.display : nav.display.slice(0, slash);
     const rest = slash === -1 ? '' : nav.display.slice(slash);
-    if (!nav.secure && nav.isWeb) text.append(el('span', 'rest', 'Not secure  ·  '));
+    if (!nav.secure && nav.isWeb) text.append(el('span', 'rest', `${tr('Not secure')}  ·  `));
     text.append(el('span', 'host', host), el('span', 'rest', rest));
   }
 
   const shield = $('#addr-shield');
-  shield.hidden = !nav || !nav.isWeb;
+  shield.hidden = !nav || !nav.isWeb || nav.reader;
   if (nav && nav.isWeb) {
     shield.classList.toggle('active', nav.adblockOn);
     shield.innerHTML = icon(nav.adblockOn ? 'shield-check' : 'shield-off', 15) + (nav.adblockOn && nav.blocked ? `<span class="count">${nav.blocked}</span>` : '');
-    shield.title = nav.adblockOn ? `${nav.blocked} ads & trackers blocked` : 'Ad blocker is off for this site';
+    shield.title = nav.adblockOn ? tr('{n} ads & trackers blocked', { n: nav.blocked }) : tr('Ad blocker is off for this site');
   }
   const star = $('#addr-star');
   star.hidden = !nav || !nav.isWeb;
   star.classList.toggle('on', Boolean(nav && nav.bookmarked));
-  star.title = nav && nav.bookmarked ? 'Remove bookmark' : 'Bookmark this page';
+  star.title = nav && nav.bookmarked ? tr('Remove bookmark') : tr('Bookmark this page');
+  const readerBtn = $('#addr-reader');
+  readerBtn.hidden = !nav || !(nav.reader || (nav.isWeb && nav.readerable));
+  readerBtn.classList.toggle('on', Boolean(nav && nav.reader));
+  readerBtn.title = nav && nav.reader ? tr('Close reader view') : tr('Reader view');
   const zoom = $('#addr-zoom');
   zoom.hidden = !nav || nav.zoom === 100;
   if (nav) zoom.textContent = `${nav.zoom}%`;
@@ -175,12 +199,17 @@ function renderToolbar() {
   if (reload.dataset.loading !== String(loading)) {
     reload.dataset.loading = String(loading);
     reload.innerHTML = loading ? icon('x') : icon('rotate-cw');
-    reload.title = loading ? 'Stop' : 'Reload';
+    reload.title = loading ? tr('Stop') : tr('Reload');
   }
+  $('#btn-split').hidden = !s.toolbar.split;
+  $('#btn-notes').hidden = !s.toolbar.notes;
+  $('#btn-downloads').hidden = !s.toolbar.downloads;
   $('#btn-split').classList.toggle('on', Boolean(s.split));
   $('#btn-notes').classList.toggle('on', s.panel === 'notes');
   $('#btn-downloads').classList.toggle('on', s.panel === 'downloads');
   $('#private-chip').hidden = !s.isPrivate;
+  $('#btn-menu').classList.toggle('badge', Boolean(s.update));
+  $('#btn-menu').title = s.update ? (s.update.status === 'ready' ? tr('Restart to update to {version}', s.update) : tr('LionsBrows {version} is available', s.update)) : tr('Open menu');
 
   const dl = s.downloads;
   const btn = $('#btn-downloads');
@@ -190,7 +219,7 @@ function renderToolbar() {
   const bar = ring.querySelector('.bar');
   bar.classList.toggle('indeterminate', dl.progress < 0);
   bar.setAttribute('stroke-dashoffset', String(69.12 * (1 - (dl.progress < 0 ? 0.25 : dl.progress))));
-  btn.title = dl.active ? `Downloading ${dl.active} file${dl.active > 1 ? 's' : ''}` : 'Downloads';
+  btn.title = dl.active ? (dl.active === 1 ? tr('Downloading 1 file') : tr('Downloading {n} files', { n: dl.active })) : tr('Downloads');
 
   renderAddress(nav);
 }
@@ -246,7 +275,7 @@ function createTabEl(id, kind) {
   e.tabIndex = 0;
   e.setAttribute('role', 'tab');
   if (kind === 'tab') {
-    e.innerHTML = `<span class="fav"></span><span class="title"></span><button class="audio" hidden></button><button class="close" title="Close tab">${icon('x', 14)}</button>`;
+    e.innerHTML = `<span class="fav"></span><span class="title"></span><button class="audio" hidden></button><button class="close" title="${tr('Close tab')}">${icon('x', 14)}</button>`;
   } else {
     e.innerHTML = '<span class="fav"></span>';
   }
@@ -336,7 +365,7 @@ function updateTabEl(e, t, inSplit) {
     if (show && audio.dataset.key !== key) {
       audio.dataset.key = key;
       audio.innerHTML = icon(t.muted ? 'volume-x' : 'volume-2', 14);
-      audio.title = t.muted ? 'Unmute tab' : 'Mute tab';
+      audio.title = t.muted ? tr('Unmute tab') : tr('Mute tab');
     }
   }
 }
@@ -416,14 +445,14 @@ function renderWorkspaces() {
   const box = $('#workspaces');
   box.textContent = '';
   if (s.isPrivate) {
-    if (!s.sidebarCollapsed) box.append(el('span', null, 'Private window'));
+    if (!s.sidebarCollapsed) box.append(el('span', null, tr('Private window')));
     box.firstChild && (box.firstChild.id = 'ws-label');
     return;
   }
   for (const w of s.workspaces) {
     const b = el('button', `ws${w.id === s.activeWorkspaceId ? ' active' : ''}${w.isolated ? ' isolated' : ''}`);
     b.append(avatar(w));
-    b.title = `${w.name} · ${w.count} tab${w.count === 1 ? '' : 's'}${w.isolated ? ' · separate logins' : ''}\nRight-click for options`;
+    b.title = `${w.name} · ${w.count === 1 ? tr('1 tab') : tr('{n} tabs', { n: w.count })}${w.isolated ? ` · ${tr('separate logins')}` : ''}\n${tr('Right-click for options')}`;
     b.onclick = () => cmd('switchWorkspace', w.id);
     b.oncontextmenu = (ev) => {
       ev.preventDefault();
@@ -446,7 +475,7 @@ function renderWorkspaces() {
   }
   const add = el('button', 'ws ws-add');
   add.innerHTML = icon('plus', 16);
-  add.title = 'New workspace';
+  add.title = tr('New workspace');
   add.onclick = () => cmd('newWorkspace');
   box.append(add);
   if (s.workspaces.length === 1 && !s.sidebarCollapsed) {
@@ -459,9 +488,10 @@ function renderWorkspaces() {
 function renderWorkspaceButton() {
   const ws = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
   const btn = $('#ws-button');
+  btn.hidden = state.isPrivate || state.workspaces.length < 2;
   if (!ws) return;
   btn.replaceChildren(avatar(ws, 20));
-  btn.title = `Workspace: ${ws.name}${state.workspaces.length > 1 ? ` (${state.workspaces.length} workspaces)` : ''}`;
+  btn.title = tr('Workspace: {name}', { name: ws.name });
 }
 
 let bookmarksKey = '';
@@ -477,7 +507,7 @@ function renderBookmarksBar() {
   bookmarksKey = key;
   bar.textContent = '';
   if (!items.length) {
-    bar.append(el('span', 'bm-empty', 'Bookmark pages with the star in the address bar and they show up here.'));
+    bar.append(el('span', 'bm-empty', tr('Bookmark pages with the star in the address bar and they show up here.')));
     return;
   }
   for (const b of items) {
@@ -555,7 +585,7 @@ const dlEls = new Map();
 function renderDownloads(items) {
   const list = $('#dl-list');
   if (!items.length) {
-    list.innerHTML = '<div class="empty">Files you download will show up here.</div>';
+    list.innerHTML = `<div class="empty">${tr('Files you download will show up here.')}</div>`;
     dlEls.clear();
     return;
   }
@@ -580,21 +610,21 @@ function renderDownloads(items) {
       e.querySelector('.name').textContent = d.filename;
       e.title = d.path || d.url;
       let sub;
-      if (d.state === 'progressing') sub = `${formatBytes(d.received)}${d.total ? ` of ${formatBytes(d.total)}` : ''}${d.paused ? ' · Paused' : ''}`;
-      else if (d.state === 'completed') sub = `${formatBytes(d.total || d.received)} · Done`;
-      else if (d.state === 'cancelled') sub = 'Cancelled';
-      else sub = 'Failed';
+      if (d.state === 'progressing') sub = `${d.total ? tr('{done} of {total}', { done: formatBytes(d.received), total: formatBytes(d.total) }) : formatBytes(d.received)}${d.paused ? ` · ${tr('Paused')}` : ''}`;
+      else if (d.state === 'completed') sub = `${formatBytes(d.total || d.received)} · ${tr('Done')}`;
+      else if (d.state === 'cancelled') sub = tr('Cancelled');
+      else sub = tr('Failed');
       e.querySelector('.sub').textContent = sub;
       const bar = e.querySelector('.bar');
       bar.hidden = d.state !== 'progressing';
       bar.firstChild.style.width = d.total ? `${Math.round((d.received / d.total) * 100)}%` : '30%';
       const acts = [];
       if (d.state === 'progressing') {
-        acts.push(d.paused ? ['resume', 'play', 'Resume'] : ['pause', 'pause', 'Pause'], ['cancel', 'x', 'Cancel']);
+        acts.push(d.paused ? ['resume', 'play', tr('Resume')] : ['pause', 'pause', tr('Pause')], ['cancel', 'x', tr('Cancel')]);
       } else if (d.state === 'completed') {
-        acts.push(['show', 'folder-open', 'Show in folder']);
+        acts.push(['show', 'folder-open', tr('Show in folder')]);
       } else {
-        acts.push(['remove', 'x', 'Remove from list']);
+        acts.push(['remove', 'x', tr('Remove from list')]);
       }
       e.querySelector('.actions').innerHTML = acts.map(([a, ic, title]) => `<button class="btn" data-act="${a}" title="${title}">${icon(ic, 15)}</button>`).join('');
     }
@@ -618,14 +648,14 @@ function renderPanel() {
   $('#panel-downloads').hidden = p !== 'downloads';
   if (p === 'notes') {
     const ws = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
-    $('#panel-title').textContent = ws ? `Notes · ${ws.name}` : 'Notes';
+    $('#panel-title').textContent = ws ? `${tr('Notes')} · ${ws.name}` : tr('Notes');
     if (notesFor !== state.activeWorkspaceId) loadNotes();
   } else {
     flushNotes();
     notesFor = null;
   }
   if (p === 'downloads') {
-    $('#panel-title').textContent = 'Downloads';
+    $('#panel-title').textContent = tr('Downloads');
     renderDownloads(state.downloadList);
   }
 }
@@ -648,7 +678,7 @@ function renderPanes() {
   const handle = el('div', 'pane-handle');
   const gap = b.x - (a.x + a.width);
   Object.assign(handle.style, { left: `${a.x + a.width}px`, top: `${a.y}px`, width: `${gap}px`, height: `${a.height}px` });
-  handle.title = 'Drag to resize · double-click to reset';
+  handle.title = tr('Drag to resize · double-click to reset');
   handle.addEventListener('pointerdown', (ev) => {
     handle.setPointerCapture(ev.pointerId);
     handle.classList.add('dragging');
@@ -689,6 +719,7 @@ function render() {
   renderToolbar();
   renderFind();
   renderTabs();
+  updateTabOverflow();
   renderWorkspaces();
   renderWorkspaceButton();
   renderBookmarksBar();

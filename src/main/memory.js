@@ -3,6 +3,7 @@
 const os = require('node:os');
 const { app } = require('electron');
 const { ctx } = require('./context');
+const { tr } = require('./i18n');
 
 const GB = 1024 ** 3;
 const MINUTE = 60_000;
@@ -74,11 +75,9 @@ function start() {
 }
 
 function describe(p) {
-  if (!p.sleepAfter && p.maxAwake === Infinity) return 'Tabs are never put to sleep.';
-  const parts = [];
-  if (p.sleepAfter) parts.push(`Inactive tabs sleep after ${p.sleepAfter} minutes`);
-  if (p.maxAwake !== Infinity) parts.push(`at most ${p.maxAwake} background tabs stay active`);
-  return `${parts.join(', ')}.`;
+  if (!p.sleepAfter && p.maxAwake === Infinity) return tr('Tabs are never put to sleep.');
+  if (p.maxAwake === Infinity) return tr('Inactive tabs sleep after {minutes} minutes.', { minutes: p.sleepAfter });
+  return tr('Inactive tabs sleep after {minutes} minutes, at most {max} background tabs stay active.', { minutes: p.sleepAfter, max: p.maxAwake });
 }
 
 function report() {
