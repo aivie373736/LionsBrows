@@ -46,10 +46,7 @@ jobs:
         run: |
           PUBLISH=${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
           case "$RUNNER_OS" in
-            Windows)
-              npx electron-builder --win --x64 --publish $PUBLISH
-              npx electron-builder --win --arm64 --publish $PUBLISH
-              ;;
+            Windows) npx electron-builder --win --publish $PUBLISH ;;
             Linux) npx electron-builder --linux --publish $PUBLISH ;;
             macOS) npx electron-builder --mac --publish $PUBLISH ;;
           esac

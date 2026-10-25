@@ -47,7 +47,8 @@
         {
           "target": "nsis",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         }
       ],
@@ -57,6 +58,7 @@
       "oneClick": true,
       "perMachine": false,
       "createDesktopShortcut": true,
+      "buildUniversalInstaller": false,
       "include": "build/installer.nsh"
     },
     "mac": {
