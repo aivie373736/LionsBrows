@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="LionsBrows">
+  <defs>
+    <radialGradient id="mane" gradientUnits="userSpaceOnUse" cx="128" cy="134" r="122">
+      <stop offset="0.55" stop-color="#ffb636"/>
+      <stop offset="0.8" stop-color="#f08a22"/>
+      <stop offset="1" stop-color="#d9561a"/>
+    </radialGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe2a3"/>
+      <stop offset="1" stop-color="#ffc96b"/>
+    </linearGradient>
+  </defs>
+  <!-- mane -->
+  <g fill="url(#mane)">
+    <circle cx="128" cy="134" r="88"/>
+    <circle cx="212" cy="134" r="30"/>
+    <circle cx="200.7" cy="176" r="30"/>
+    <circle cx="170" cy="206.7" r="30"/>
+    <circle cx="128" cy="218" r="30"/>
+    <circle cx="86" cy="206.7" r="30"/>
+    <circle cx="55.3" cy="176" r="30"/>
+    <circle cx="44" cy="134" r="30"/>
+    <circle cx="55.3" cy="92" r="30"/>
+    <circle cx="86" cy="61.3" r="30"/>
+    <circle cx="128" cy="50" r="30"/>
+    <circle cx="170" cy="61.3" r="30"/>
+    <circle cx="200.7" cy="92" r="30"/>
+  </g>
+  <!-- ears -->
+  <circle cx="84" cy="80" r="20" fill="#ffd27a"/>
+  <circle cx="172" cy="80" r="20" fill="#ffd27a"/>
+  <circle cx="84" cy="80" r="10" fill="#ec8e3a"/>
+  <circle cx="172" cy="80" r="10" fill="#ec8e3a"/>
+  <!-- face -->
+  <ellipse cx="128" cy="140" rx="68" ry="64" fill="url(#face)"/>
+  <!-- the brows (one raised, obviously) -->
+  <path class="brow brow-l" d="M84 113 Q100 100 117 109" fill="none" stroke="#4a2a12" stroke-width="10" stroke-linecap="round"/>
+  <path class="brow brow-r" d="M139 102 Q157 82 176 97" fill="none" stroke="#4a2a12" stroke-width="10" stroke-linecap="round"/>
+  <!-- eyes -->
+  <circle cx="102" cy="128" r="8" fill="#3b2412"/>
+  <circle cx="156" cy="125" r="8" fill="#3b2412"/>
+  <circle cx="104.5" cy="125.5" r="2.6" fill="#fff"/>
+  <circle cx="158.5" cy="122.5" r="2.6" fill="#fff"/>
+  <!-- muzzle -->
+  <ellipse cx="128" cy="168" rx="36" ry="25" fill="#fff3dc"/>
+  <path d="M115 153 Q128 146 141 153 Q136 165 128 167 Q120 165 115 153 Z" fill="#4a2a12"/>
+  <path d="M128 167 V174 M128 174 Q119 183 110 176 M128 174 Q137 183 146 176" fill="none" stroke="#4a2a12" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#d3a066">
+    <circle cx="107" cy="164" r="2.4"/>
+    <circle cx="112" cy="171" r="2.4"/>
+    <circle cx="149" cy="164" r="2.4"/>
+    <circle cx="144" cy="171" r="2.4"/>
+  </g>
+</svg>

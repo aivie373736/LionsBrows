@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Can't open this page</title>
+    <link rel="icon" href="lions://assets/logo.svg" />
+    <link rel="stylesheet" href="lions://assets/theme.css" />
+    <link rel="stylesheet" href="common.css" />
+    <style>
+      body {
+        display: grid;
+        place-items: center;
+      }
+      .err {
+        max-width: 560px;
+        padding: 40px 28px;
+      }
+      .err img {
+        width: 84px;
+        height: 84px;
+      }
+      h1 {
+        font-size: 26px;
+        margin: 22px 0 10px;
+        letter-spacing: -0.01em;
+      }
+      p {
+        color: var(--text-2);
+        line-height: 1.55;
+        margin: 0 0 8px;
+      }
+      .url {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--text);
+        word-break: break-all;
+      }
+      .code {
+        color: var(--text-3);
+        font-size: 12px;
+        font-family: var(--mono);
+        margin-top: 18px;
+      }
+      .actions {
+        margin-top: 26px;
+        display: flex;
+        gap: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="err">
+      <img src="lions://assets/logo.svg" alt="" />
+      <h1 id="title"></h1>
+      <p id="desc"></p>
+      <p class="url" id="url"></p>
+      <div class="actions">
+        <button class="button primary" id="retry">Try again</button>
+        <button class="button" id="back">Go back</button>
+      </div>
+      <div class="code" id="code"></div>
+    </main>
+    <script src="error.js"></script>
+  </body>
+</html>

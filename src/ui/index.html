@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: http: data: lions:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>LionsBrows</title>
+    <link rel="stylesheet" href="../shared/theme.css" />
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body>
+    <header id="toolbar">
+      <div class="tb-left">
+        <button class="btn no-drag" id="btn-sidebar" title="Show / hide sidebar"></button>
+        <button class="btn no-drag" id="btn-back" title="Back"></button>
+        <button class="btn no-drag" id="btn-forward" title="Forward"></button>
+        <button class="btn no-drag" id="btn-reload" title="Reload"></button>
+      </div>
+      <div class="tb-center">
+        <div id="address" class="no-drag" role="button" tabindex="0" title="Search or enter address">
+          <span id="addr-icon"></span>
+          <span id="addr-text"></span>
+          <span class="addr-actions">
+            <button id="addr-zoom" class="pill" title="Reset zoom" hidden></button>
+            <button id="addr-shield" class="pill" title="Ad blocker"></button>
+            <button id="addr-star" class="mini" title="Bookmark this page"></button>
+          </span>
+        </div>
+      </div>
+      <div class="tb-right">
+        <span id="private-chip" hidden></span>
+        <button class="btn no-drag" id="btn-split" title="Split view"></button>
+        <button class="btn no-drag" id="btn-notes" title="Notes"></button>
+        <button class="btn no-drag" id="btn-downloads" title="Downloads"></button>
+        <button class="btn no-drag" id="btn-menu" title="Menu"></button>
+        <div id="wco-spacer"></div>
+      </div>
+    </header>
+
+    <div id="findbar" hidden>
+      <input id="find-input" type="text" placeholder="Find in page" spellcheck="false" autocomplete="off" />
+      <span id="find-count"></span>
+      <button class="btn" id="find-prev" title="Previous (Shift+Enter)"></button>
+      <button class="btn" id="find-next" title="Next (Enter)"></button>
+      <button class="btn" id="find-close" title="Close (Esc)"></button>
+    </div>
+
+    <aside id="sidebar">
+      <div id="pinned"></div>
+      <button id="new-tab" title="New tab"></button>
+      <div id="tabs" role="tablist" aria-label="Tabs"></div>
+      <div id="sidebar-drop" aria-hidden="true"></div>
+      <footer id="sidebar-footer">
+        <div id="workspaces"></div>
+        <button class="btn" id="btn-settings" title="Settings"></button>
+      </footer>
+    </aside>
+
+    <section id="panel" hidden>
+      <header class="panel-head">
+        <h2 id="panel-title"></h2>
+        <button class="btn" id="panel-close" title="Close"></button>
+      </header>
+      <div id="panel-notes" class="panel-body" hidden>
+        <textarea id="notes" placeholder="Write anything… notes are saved automatically, one notepad per workspace." spellcheck="true"></textarea>
+      </div>
+      <div id="panel-downloads" class="panel-body" hidden>
+        <div id="dl-list"></div>
+        <footer class="panel-foot">
+          <button class="link" id="dl-clear">Clear list</button>
+          <button class="link" id="dl-all">All downloads</button>
+        </footer>
+      </div>
+    </section>
+
+    <div id="panes"></div>
+
+    <script src="../shared/icons.js"></script>
+    <script src="ui.js"></script>
+  </body>
+</html>

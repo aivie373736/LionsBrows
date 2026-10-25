@@ -1,0 +1,111 @@
+{
+  "name": "lionsbrows",
+  "productName": "LionsBrows",
+  "version": "0.1.0",
+  "description": "A fast, private Chromium-based browser with vertical tabs, workspaces, split view, a command bar and a built-in ad blocker.",
+  "main": "src/main/main.js",
+  "homepage": "https://github.com/aivie373736/LionsBrows",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aivie373736/LionsBrows.git"
+  },
+  "author": "aivie373736",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test \"test/unit/*.test.js\"",
+    "test:e2e": "node test/e2e.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "dist": "electron-builder --publish never"
+  },
+  "dependencies": {
+    "@ghostery/adblocker-electron": "^2.20.1",
+    "tldts": "^7.4.19"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "^26.18.0",
+    "lucide-static": "^1.61.0"
+  },
+  "build": {
+    "appId": "io.github.aivie373736.lionsbrows",
+    "productName": "LionsBrows",
+    "artifactName": "LionsBrows-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "include": "build/installer.nsh"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "extendInfo": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "Web site URL",
+            "CFBundleURLSchemes": [
+              "http",
+              "https"
+            ]
+          }
+        ],
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "HTML document",
+            "CFBundleTypeRole": "Viewer",
+            "LSItemContentTypes": [
+              "public.html"
+            ]
+          }
+        ]
+      }
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Network;WebBrowser",
+      "icon": "build/icon.png",
+      "mimeTypes": [
+        "text/html",
+        "x-scheme-handler/http",
+        "x-scheme-handler/https"
+      ]
+    },
+    "publish": {
+      "provider": "github",
+      "releaseType": "release"
+    }
+  }
+}

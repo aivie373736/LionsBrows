@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>New Tab</title>
+    <link rel="icon" href="lions://assets/logo.svg" />
+    <link rel="stylesheet" href="lions://assets/theme.css" />
+    <link rel="stylesheet" href="common.css" />
+    <link rel="stylesheet" href="newtab.css" />
+  </head>
+  <body>
+    <main class="nt">
+      <div class="logo" id="logo" title="Hi!"></div>
+      <h1 id="greeting"></h1>
+      <p id="date"></p>
+      <form id="search-form" autocomplete="off">
+        <span class="lead" id="search-icon"></span>
+        <input id="search" type="text" spellcheck="false" autofocus />
+        <kbd id="kbd-hint"></kbd>
+      </form>
+      <div id="sites"></div>
+      <div id="stats"></div>
+    </main>
+    <footer class="nt-foot" id="tips"></footer>
+    <script src="lions://assets/icons.js"></script>
+    <script src="common.js"></script>
+    <script src="newtab.js"></script>
+  </body>
+</html>

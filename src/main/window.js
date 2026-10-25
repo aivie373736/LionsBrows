@@ -1,0 +1,782 @@
+'use strict';
+
+// A LionsBrows window: a BaseWindow holding
+//   - the browser UI (sidebar, toolbar, panels) as one full-size view,
+//   - the visible tab(s) as views on top of it (two in split view),
+//   - an overlay view for the command bar, added only while it's open.
+
+const path = require('node:path');
+const { BaseWindow, WebContentsView, nativeTheme, screen } = require('electron');
+const { ctx } = require('./context');
+const { Tab, NEWTAB } = require('./tab');
+const omnibox = require('./omnibox');
+const adblock = require('./adblock');
+const downloads = require('./downloads');
+const bookmarks = require('./bookmarks');
+
+const UI_PRELOAD = path.join(__dirname, '..', 'preload', 'ui.js');
+const UI_HTML = path.join(__dirname, '..', 'ui', 'index.html');
+const OVERLAY_HTML = path.join(__dirname, '..', 'ui', 'overlay.html');
+const ICON = path.join(__dirname, '..', 'shared', 'icon.png');
+
+const TOOLBAR_H = 48;
+const SIDEBAR_W = 252;
+const SIDEBAR_COLLAPSED_W = 60;
+const PANEL_W = 340;
+const FIND_H = 46;
+const GAP = 8;
+
+const COLORS = {
+  dark: { bg: '#1b1916', fg: '#efe9e1' },
+  light: { bg: '#f3efe8', fg: '#2b2620' },
+  private: { bg: '#221b2e', fg: '#ece6f7' },
+};
+
+let privateCounter = 0;
+
+function onSomeDisplay(b) {
+  return screen.getAllDisplays().some(({ workArea: a }) => b.x < a.x + a.width - 50 && b.x + b.width > a.x + 50 && b.y >= a.y - 10 && b.y < a.y + a.height - 50);
+}
+
+class BrowserWin {
+  constructor({ isPrivate = false, restore = null, urls = [] } = {}) {
+    this.isPrivate = isPrivate;
+    this.privateId = isPrivate ? ++privateCounter : 0;
+    this.focusedAt = Date.now();
+    this.spaces = new Map(); // workspaceId -> { tabs: Tab[], activeId, split: {a, b, ratio} | null }
+    this.tabsById = new Map();
+    this.attached = new Set();
+    this.closed = [];
+    this.panel = null;
+    this.find = { open: false, query: '', matches: 0, active: 0 };
+    this.htmlFullscreenTab = null;
+    this.wasFullscreen = false;
+    this.overlay = null;
+    this.overlayOpen = false;
+    this.statePending = false;
+    this.forget = false;
+    this.lastArea = { x: 0, y: 0, width: 800, height: 600 };
+    this.activeWorkspaceId = isPrivate ? 'private' : ctx.workspace(restore?.activeWorkspaceId)?.id || ctx.workspaces()[0].id;
+
+    this.#createWindow(restore);
+    ctx.windows.add(this);
+
+    if (restore && !isPrivate) this.#restore(restore);
+    for (const url of urls) this.newTab({ url });
+    if (!this.space().tabs.length) this.newTab();
+    else if (!urls.length) this.activate(this.space().activeId || this.space().tabs[0].id);
+  }
+
+  // ---------------------------------------------------------------- window
+
+  #colors() {
+    if (this.isPrivate) return COLORS.private;
+    return nativeTheme.shouldUseDarkColors ? COLORS.dark : COLORS.light;
+  }
+
+  #createWindow(restore) {
+    const c = this.#colors();
+    const bounds = restore?.bounds;
+    const opts = {
+      width: bounds?.width || 1320,
+      height: bounds?.height || 860,
+      minWidth: 560,
+      minHeight: 380,
+      show: false,
+      title: this.isPrivate ? 'LionsBrows (Private)' : 'LionsBrows',
+      backgroundColor: c.bg,
+      titleBarStyle: 'hidden',
+      icon: ICON,
+    };
+    if (bounds && onSomeDisplay(bounds)) Object.assign(opts, { x: bounds.x, y: bounds.y });
+    if (process.platform === 'darwin') opts.trafficLightPosition = { x: 16, y: 17 };
+    else opts.titleBarOverlay = { color: c.bg, symbolColor: c.fg, height: TOOLBAR_H };
+
+    this.win = new BaseWindow(opts);
+    if (restore?.maximized) this.win.maximize();
+
+    this.ui = new WebContentsView({ webPreferences: { preload: UI_PRELOAD, sandbox: true, contextIsolation: true, spellcheck: false } });
+    this.ui.setBackgroundColor(c.bg);
+    this.win.contentView.addChildView(this.ui);
+    this.ui.webContents.loadFile(UI_HTML, { query: { private: this.isPrivate ? '1' : '0', platform: process.platform } });
+    this.ui.webContents.on('before-input-event', (event, input) => require('./shortcuts').handle(this, input, event));
+    this.ui.webContents.once('did-finish-load', () => this.#show());
+    setTimeout(() => this.#show(), 2500);
+
+    this.win.on('resize', () => this.layout());
+    this.win.on('enter-full-screen', () => this.layout());
+    this.win.on('leave-full-screen', () => this.layout());
+    this.win.on('focus', () => {
+      this.focusedAt = Date.now();
+    });
+    this.win.on('close', () => this.#onClose());
+    this.win.on('closed', () => this.#onClosed());
+    this.layout();
+  }
+
+  #show() {
+    if (this.shown || this.win.isDestroyed()) return;
+    this.shown = true;
+    this.win.show();
+    this.focusActive();
+  }
+
+  applyTheme() {
+    const c = this.#colors();
+    this.ui.setBackgroundColor(c.bg);
+    if (process.platform !== 'darwin') this.win.setTitleBarOverlay?.({ color: c.bg, symbolColor: c.fg, height: TOOLBAR_H });
+    this.scheduleState();
+  }
+
+  #onClose() {
+    if (this.isPrivate) return;
+    const normal = [...ctx.windows].filter((w) => !w.isPrivate);
+    // Closing one of several windows means "I'm done with these tabs".
+    // Closing the last window keeps it for session restore.
+    if (!ctx.quitting && normal.length > 1) this.forget = true;
+    require('./session').saveNow();
+  }
+
+  #onClosed() {
+    ctx.windows.delete(this);
+    for (const tab of this.tabsById.values()) tab.destroy();
+    this.tabsById.clear();
+    for (const view of [this.ui, this.overlay]) if (view && !view.webContents.isDestroyed()) view.webContents.close();
+    if (this.isPrivate) {
+      const ses = require('electron').session.fromPartition(ctx.partitionFor(null, true, this.privateId));
+      ses.clearStorageData().catch(() => {});
+      ses.clearCache().catch(() => {});
+    }
+  }
+
+  ownsWebContents(wc) {
+    if (!wc) return false;
+    if (wc === this.ui.webContents || wc === this.overlay?.webContents) return true;
+    for (const t of this.tabsById.values()) if (t.wc === wc) return true;
+    return false;
+  }
+
+  // ---------------------------------------------------------------- spaces & tabs
+
+  space(id = this.activeWorkspaceId) {
+    let s = this.spaces.get(id);
+    if (!s) {
+      s = { tabs: [], activeId: null, split: null };
+      this.spaces.set(id, s);
+    }
+    return s;
+  }
+
+  allTabs() {
+    return [...this.tabsById.values()];
+  }
+
+  tabById(id) {
+    return this.tabsById.get(id) || null;
+  }
+
+  activeTab() {
+    return this.tabById(this.space().activeId);
+  }
+
+  visibleTabs() {
+    const s = this.space();
+    if (s.split) {
+      const a = this.tabById(s.split.a);
+      const b = this.tabById(s.split.b);
+      if (a && b) return [a, b];
+      s.split = null;
+    }
+    const t = this.tabById(s.activeId);
+    return t ? [t] : [];
+  }
+
+  #restore(saved) {
+    const startup = ctx.settings().startup;
+    for (const [wsId, data] of Object.entries(saved.spaces || {})) {
+      if (!ctx.workspaces().some((w) => w.id === wsId)) continue;
+      const s = this.space(wsId);
+      const tabs = (data.tabs || []).filter((t) => startup === 'restore' || t.pinned);
+      for (const t of tabs) {
+        const tab = new Tab(this, { ...t, workspaceId: wsId });
+        s.tabs.push(tab);
+        this.tabsById.set(tab.id, tab);
+      }
+      if (startup === 'restore') {
+        s.activeId = s.tabs[data.activeIndex]?.id ?? s.tabs[0]?.id ?? null;
+        if (data.split && s.tabs[data.split[0]] && s.tabs[data.split[1]]) {
+          s.split = { a: s.tabs[data.split[0]].id, b: s.tabs[data.split[1]].id, ratio: data.split[2] || 0.5 };
+        }
+      } else {
+        s.activeId = s.tabs[0]?.id ?? null;
+      }
+    }
+  }
+
+  newTab({ url = NEWTAB, background = false, workspaceId = this.activeWorkspaceId, afterId = null, adopt = null, pinned = false, typed = false } = {}) {
+    const s = this.space(workspaceId);
+    const tab = new Tab(this, { url, workspaceId, webContents: adopt, openerId: afterId, pinned });
+    let index = s.tabs.length;
+    if (afterId) {
+      const i = s.tabs.findIndex((t) => t.id === afterId);
+      if (i >= 0) {
+        index = i + 1;
+        while (index < s.tabs.length && s.tabs[index].openerId === afterId) index++;
+      }
+    }
+    s.tabs.splice(index, 0, tab);
+    this.tabsById.set(tab.id, tab);
+    this.#sortPinned(s);
+    tab.typed = typed;
+
+    if (background || workspaceId !== this.activeWorkspaceId) {
+      if (!adopt) tab.ensureView();
+      tab.view.setBounds(this.lastArea);
+      this.scheduleState();
+    } else {
+      this.activate(tab.id);
+    }
+    this.scheduleSave();
+    return tab;
+  }
+
+  activate(id) {
+    const tab = this.tabById(id);
+    if (!tab) return;
+    if (tab.workspaceId !== this.activeWorkspaceId) {
+      this.activeWorkspaceId = tab.workspaceId;
+    }
+    const s = this.space();
+    if (s.split && tab.id !== s.split.a && tab.id !== s.split.b) s.split = null;
+    const prev = this.tabById(s.activeId);
+    if (prev && prev !== tab) prev.lastActive = Date.now();
+    s.activeId = tab.id;
+    tab.lastActive = Date.now();
+    if (this.find.open) this.closeFind(false);
+    this.layout();
+    if (!this.overlayOpen) this.focusActive();
+    this.scheduleState();
+    this.scheduleSave();
+  }
+
+  focusActive() {
+    const t = this.activeTab();
+    if (t?.wc && !this.win.isDestroyed()) t.wc.focus();
+  }
+
+  tabFocused(tab) {
+    const s = this.space(tab.workspaceId);
+    if (s.split && (s.split.a === tab.id || s.split.b === tab.id) && s.activeId !== tab.id) {
+      s.activeId = tab.id;
+      this.scheduleState();
+    }
+  }
+
+  closeTab(id) {
+    const tab = this.tabById(id);
+    if (!tab) return;
+    const s = this.space(tab.workspaceId);
+    const idx = s.tabs.indexOf(tab);
+    if (!tab.url.startsWith(NEWTAB)) {
+      this.closed.push({ ...tab.serialize(), workspaceId: tab.workspaceId, index: idx });
+      if (this.closed.length > 25) this.closed.shift();
+    }
+    s.tabs.splice(idx, 1);
+    this.tabsById.delete(id);
+    if (this.htmlFullscreenTab === tab) this.setHtmlFullscreen(tab, false);
+
+    if (s.split && (s.split.a === id || s.split.b === id)) {
+      const other = s.split.a === id ? s.split.b : s.split.a;
+      s.split = null;
+      if (s.activeId === id) s.activeId = other;
+    }
+    if (s.activeId === id) {
+      const opener = tab.openerId && s.tabs.find((t) => t.id === tab.openerId);
+      const next = opener && Date.now() - tab.lastActive < 1000 ? opener : s.tabs[idx] || s.tabs[idx - 1];
+      s.activeId = next ? next.id : null;
+    }
+    tab.destroy();
+
+    if (!s.tabs.length) {
+      const othersHaveTabs = [...this.spaces.values()].some((o) => o !== s && o.tabs.length);
+      if (!othersHaveTabs && tab.workspaceId === this.activeWorkspaceId) {
+        this.win.close();
+        return;
+      }
+      this.newTab({ workspaceId: tab.workspaceId, background: tab.workspaceId !== this.activeWorkspaceId });
+      return;
+    }
+    if (tab.workspaceId === this.activeWorkspaceId) this.activate(s.activeId);
+    else this.scheduleState();
+    this.scheduleSave();
+  }
+
+  tabDestroyed(tab) {
+    // The page closed itself (window.close()) or its contents went away.
+    if (this.tabsById.has(tab.id)) this.closeTab(tab.id);
+  }
+
+  closeOtherTabs(id) {
+    const tab = this.tabById(id);
+    if (!tab) return;
+    for (const t of [...this.space(tab.workspaceId).tabs]) if (t !== tab && !t.pinned) this.closeTab(t.id);
+  }
+
+  closeTabsBelow(id) {
+    const tab = this.tabById(id);
+    if (!tab) return;
+    const tabs = this.space(tab.workspaceId).tabs;
+    for (const t of tabs.slice(tabs.indexOf(tab) + 1)) if (!t.pinned) this.closeTab(t.id);
+  }
+
+  reopenClosed() {
+    const last = this.closed.pop();
+    if (!last) return;
+    const workspaceId = ctx.workspaces().some((w) => w.id === last.workspaceId) || this.isPrivate ? last.workspaceId : this.activeWorkspaceId;
+    const tab = this.newTab({ url: last.url, workspaceId, pinned: last.pinned });
+    const s = this.space(workspaceId);
+    s.tabs.splice(s.tabs.indexOf(tab), 1);
+    s.tabs.splice(Math.min(last.index, s.tabs.length), 0, tab);
+    this.#sortPinned(s);
+    this.scheduleState();
+  }
+
+  duplicateTab(id) {
+    const tab = this.tabById(id);
+    if (tab) this.newTab({ url: tab.displayUrl, afterId: id, workspaceId: tab.workspaceId });
+  }
+
+  #sortPinned(s) {
+    s.tabs.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)); // stable: keeps relative order
+  }
+
+  togglePin(id) {
+    const tab = this.tabById(id);
+    if (!tab) return;
+    tab.pinned = !tab.pinned;
+    const s = this.space(tab.workspaceId);
+    // Unpinned tabs go to the top of the regular list, newly pinned to the end of the pinned ones.
+    s.tabs.splice(s.tabs.indexOf(tab), 1);
+    const firstUnpinned = s.tabs.findIndex((t) => !t.pinned);
+    s.tabs.splice(firstUnpinned === -1 ? s.tabs.length : firstUnpinned, 0, tab);
+    this.scheduleState();
+    this.scheduleSave();
+  }
+
+  /** Move a tab before `beforeId` (or to the end of its section when null). */
+  moveTab(id, beforeId, pinned) {
+    const tab = this.tabById(id);
+    if (!tab) return;
+    const s = this.space(tab.workspaceId);
+    s.tabs.splice(s.tabs.indexOf(tab), 1);
+    if (typeof pinned === 'boolean') tab.pinned = pinned;
+    let idx = beforeId ? s.tabs.findIndex((t) => t.id === beforeId) : -1;
+    if (idx === -1) {
+      const lastOfSection = s.tabs.map((t) => t.pinned).lastIndexOf(tab.pinned);
+      idx = tab.pinned ? lastOfSection + 1 : s.tabs.length;
+    }
+    s.tabs.splice(idx, 0, tab);
+    this.#sortPinned(s);
+    this.scheduleState();
+    this.scheduleSave();
+  }
+
+  sleepTab(id) {
+    const tab = this.tabById(id);
+    if (!tab || this.visibleTabs().includes(tab)) return;
+    tab.sleep();
+  }
+
+  /** Recreate a tab's page (e.g. after its workspace switched cookie jars). */
+  rebuildTab(tab) {
+    if (!tab.view) return;
+    tab.audible = false;
+    tab.sleep();
+    this.layout();
+  }
+
+  sleepOtherTabs() {
+    const visible = this.visibleTabs();
+    for (const t of this.allTabs()) if (!visible.includes(t)) t.sleep();
+  }
+
+  tabChanged(tab) {
+    this.scheduleState();
+    if (tab.workspaceId === this.activeWorkspaceId) this.scheduleSave();
+  }
+
+  detachView(view) {
+    if (!this.attached.has(view)) return;
+    this.attached.delete(view);
+    if (!this.win.isDestroyed()) this.win.contentView.removeChildView(view);
+  }
+
+  // ---------------------------------------------------------------- workspaces
+
+  switchWorkspace(id) {
+    if (this.isPrivate || !ctx.workspaces().some((w) => w.id === id) || id === this.activeWorkspaceId) return;
+    const prev = this.activeTab();
+    if (prev) prev.lastActive = Date.now();
+    this.closeFind(false);
+    this.activeWorkspaceId = id;
+    const s = this.space();
+    if (!s.tabs.length) return void this.newTab();
+    this.activate(s.activeId || s.tabs[0].id);
+  }
+
+  cycleWorkspace(dir) {
+    const list = ctx.workspaces();
+    const i = list.findIndex((w) => w.id === this.activeWorkspaceId);
+    this.switchWorkspace(list[(i + dir + list.length) % list.length].id);
+  }
+
+  moveTabToWorkspace(id, wsId) {
+    const tab = this.tabById(id);
+    if (!tab || tab.workspaceId === wsId || !ctx.workspaces().some((w) => w.id === wsId)) return;
+    const from = this.space(tab.workspaceId);
+    const wasActive = from.activeId === tab.id;
+    const oldPartition = tab.partition;
+    // Take it out of its current workspace...
+    from.tabs.splice(from.tabs.indexOf(tab), 1);
+    if (from.split && (from.split.a === id || from.split.b === id)) from.split = null;
+    if (wasActive) from.activeId = from.tabs[0]?.id ?? null;
+    this.detachView(tab.view);
+    // ...and into the new one.
+    tab.workspaceId = wsId;
+    const to = this.space(wsId);
+    to.tabs.push(tab);
+    this.#sortPinned(to);
+    if (!to.activeId) to.activeId = tab.id;
+    // Different cookie jar? The page has to be reloaded in the new session.
+    if (tab.partition !== oldPartition && tab.view) {
+      tab.audible = false;
+      tab.sleep();
+    }
+    if (!from.tabs.length) this.newTab({ workspaceId: from === this.space() ? this.activeWorkspaceId : tab.workspaceId, background: from !== this.space() });
+    if (wasActive && from === this.space() && from.activeId) this.activate(from.activeId);
+    this.layout();
+    this.scheduleState();
+    this.scheduleSave();
+  }
+
+  // ---------------------------------------------------------------- split view
+
+  toggleSplit() {
+    const s = this.space();
+    if (s.split) {
+      s.split = null;
+    } else {
+      const active = this.activeTab();
+      if (!active) return;
+      const partner = s.tabs.filter((t) => t !== active).sort((a, b) => b.lastActive - a.lastActive)[0] || this.newTab({ background: true });
+      s.split = { a: active.id, b: partner.id, ratio: 0.5 };
+    }
+    this.layout();
+    this.focusActive();
+    this.scheduleState();
+    this.scheduleSave();
+  }
+
+  splitWith(tabId) {
+    const s = this.space();
+    const active = this.activeTab();
+    const other = this.tabById(tabId);
+    if (!active || !other || active === other || other.workspaceId !== this.activeWorkspaceId) return;
+    s.split = { a: active.id, b: other.id, ratio: 0.5 };
+    this.layout();
+    this.scheduleState();
+  }
+
+  openInSplit(url) {
+    const tab = this.newTab({ url, background: true, afterId: this.space().activeId });
+    this.splitWith(tab.id);
+  }
+
+  swapSplit() {
+    const s = this.space();
+    if (!s.split) return;
+    s.split = { a: s.split.b, b: s.split.a, ratio: 1 - s.split.ratio };
+    this.layout();
+    this.scheduleState();
+  }
+
+  setSplitRatio(ratio) {
+    const s = this.space();
+    if (!s.split) return;
+    s.split.ratio = Math.min(0.85, Math.max(0.15, Number(ratio) || 0.5));
+    this.layout();
+    this.scheduleState();
+  }
+
+  // ---------------------------------------------------------------- layout
+
+  #paneRects(width, height) {
+    const left = ctx.settings().sidebarCollapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W;
+    const top = TOOLBAR_H + (this.find.open ? FIND_H : 0);
+    const right = this.panel ? PANEL_W : GAP;
+    const area = { x: left, y: top, width: Math.max(50, width - left - right), height: Math.max(50, height - top - GAP) };
+    this.lastArea = area;
+    const visible = this.visibleTabs();
+    if (visible.length === 2) {
+      const w1 = Math.round((area.width - GAP) * this.space().split.ratio);
+      return [
+        [visible[0], { x: area.x, y: area.y, width: w1, height: area.height }],
+        [visible[1], { x: area.x + w1 + GAP, y: area.y, width: area.width - w1 - GAP, height: area.height }],
+      ];
+    }
+    return visible.map((t) => [t, area]);
+  }
+
+  layout() {
+    if (!this.win || this.win.isDestroyed()) return;
+    const [width, height] = this.win.getContentSize();
+    this.ui.setBounds({ x: 0, y: 0, width, height });
+
+    const fs = this.htmlFullscreenTab;
+    const rects = new Map(fs && fs.workspaceId === this.activeWorkspaceId ? [[fs, { x: 0, y: 0, width, height }]] : this.#paneRects(width, height));
+    this.panes = [...rects].map(([t, r]) => ({ tabId: t.id, ...r }));
+
+    let added = false;
+    for (const tab of this.tabsById.values()) {
+      const r = rects.get(tab);
+      if (r) {
+        const view = tab.ensureView();
+        if (!this.attached.has(view)) {
+          this.win.contentView.addChildView(view);
+          this.attached.add(view);
+          added = true;
+        }
+        view.setBounds(r);
+        view.setBorderRadius?.(fs ? 0 : 10);
+      } else if (tab.view) {
+        this.detachView(tab.view);
+      }
+    }
+    if (this.overlayOpen) {
+      if (added) {
+        this.win.contentView.removeChildView(this.overlay);
+        this.win.contentView.addChildView(this.overlay);
+      }
+      this.overlay.setBounds({ x: 0, y: 0, width, height });
+    }
+  }
+
+  setHtmlFullscreen(tab, on) {
+    if (on) {
+      this.htmlFullscreenTab = tab;
+      this.wasFullscreen = this.win.isFullScreen();
+      if (!this.wasFullscreen) this.win.setFullScreen(true);
+    } else if (this.htmlFullscreenTab === tab) {
+      this.htmlFullscreenTab = null;
+      if (!this.wasFullscreen && this.win.isFullScreen()) this.win.setFullScreen(false);
+    }
+    this.layout();
+    this.scheduleState();
+  }
+
+  toggleSidebar() {
+    ctx.setSetting('sidebarCollapsed', !ctx.settings().sidebarCollapsed); // re-lays out every window
+  }
+
+  togglePanel(name) {
+    this.panel = this.panel === name ? null : name;
+    this.layout();
+    this.scheduleState();
+  }
+
+  // ---------------------------------------------------------------- find in page
+
+  openFind() {
+    this.find.open = true;
+    this.layout();
+    this.scheduleState();
+    this.ui.webContents.focus();
+    this.ui.webContents.send('ui:focus-find');
+  }
+
+  findText(text, { forward = true, next = false } = {}) {
+    const wc = this.activeTab()?.wc;
+    this.find.query = text;
+    if (!wc) return;
+    if (!text) {
+      wc.stopFindInPage('clearSelection');
+      Object.assign(this.find, { matches: 0, active: 0 });
+      this.scheduleState();
+      return;
+    }
+    wc.findInPage(text, { forward, findNext: !next });
+  }
+
+  onFindResult(tab, result) {
+    if (tab !== this.activeTab() || !result.finalUpdate) return;
+    Object.assign(this.find, { matches: result.matches, active: result.activeMatchOrdinal });
+    this.scheduleState();
+  }
+
+  closeFind(refocus = true) {
+    if (!this.find.open) return;
+    this.find.open = false;
+    this.find.matches = 0;
+    this.activeTab()?.wc?.stopFindInPage('clearSelection');
+    this.layout();
+    this.scheduleState();
+    if (refocus) this.focusActive();
+  }
+
+  // ---------------------------------------------------------------- command bar overlay
+
+  #ensureOverlay() {
+    if (this.overlay) return this.overlayReady;
+    this.overlay = new WebContentsView({ webPreferences: { preload: UI_PRELOAD, sandbox: true, contextIsolation: true, transparent: true, spellcheck: false } });
+    this.overlay.setBackgroundColor('#00000000');
+    this.overlayReady = new Promise((resolve) => this.overlay.webContents.once('did-finish-load', resolve));
+    this.overlay.webContents.loadFile(OVERLAY_HTML, { query: { platform: process.platform } });
+    this.overlay.webContents.on('before-input-event', (event, input) => require('./shortcuts').handle(this, input, event, { overlay: true }));
+    return this.overlayReady;
+  }
+
+  async openPalette(mode = 'command', extra = {}) {
+    await this.#ensureOverlay();
+    if (this.win.isDestroyed()) return;
+    if (!this.overlayOpen) {
+      this.win.contentView.addChildView(this.overlay);
+      this.overlayOpen = true;
+    }
+    this.layout();
+    this.overlay.webContents.focus();
+    const tab = this.activeTab();
+    const text = mode === 'address' && tab && !tab.url.startsWith(NEWTAB) ? tab.displayUrl : '';
+    this.overlay.webContents.send('overlay:open', { mode, text, accent: ctx.accentColor(), dark: nativeTheme.shouldUseDarkColors, isPrivate: this.isPrivate, ...extra });
+  }
+
+  closePalette() {
+    if (!this.overlayOpen) return;
+    this.win.contentView.removeChildView(this.overlay);
+    this.overlayOpen = false;
+    this.focusActive();
+  }
+
+  // ---------------------------------------------------------------- navigation helpers
+
+  /** Open whatever the user typed in the current tab or a new one. */
+  openInput(text, { newTab = false } = {}) {
+    const result = omnibox.classify(text, ctx.settings().searchEngine);
+    if (result) this.openUrl(result.url, { newTab, typed: true });
+  }
+
+  openUrl(url, { newTab = false, background = false, typed = false } = {}) {
+    const tab = this.activeTab();
+    if (!newTab && tab) {
+      tab.navigate(url, { typed });
+      this.focusActive();
+    } else {
+      this.newTab({ url, background, typed, afterId: background ? tab?.id : null });
+    }
+  }
+
+  handleWindowOpen(opener, details) {
+    const isPopup = details.disposition === 'new-window' && /(width|height|popup)/i.test(details.features || '');
+    if (isPopup) {
+      return {
+        action: 'allow',
+        outlivesOpener: false,
+        overrideBrowserWindowOptions: { width: 560, height: 680, autoHideMenuBar: true, backgroundColor: '#ffffff', icon: ICON },
+      };
+    }
+    return {
+      action: 'allow',
+      createWindow: (options) => {
+        const tab = this.newTab({
+          url: details.url,
+          adopt: options.webContents,
+          afterId: opener.id,
+          workspaceId: opener.workspaceId,
+          background: details.disposition === 'background-tab',
+        });
+        return tab.view.webContents;
+      },
+    };
+  }
+
+  // ---------------------------------------------------------------- state for the UI
+
+  state() {
+    const s = this.space();
+    const active = this.activeTab();
+    let nav = null;
+    if (active) {
+      const st = active.state();
+      const url = active.displayUrl;
+      const isWeb = /^https?:/.test(url);
+      nav = {
+        ...st,
+        display: omnibox.displayUrl(url),
+        secure: url.startsWith('https:') || url.startsWith('lions:'),
+        isWeb,
+        bookmarked: bookmarks.has(url),
+        adblockOn: isWeb && ctx.settings().adblock && !adblock.isAllowlisted(url),
+      };
+    }
+    return {
+      isPrivate: this.isPrivate,
+      platform: process.platform,
+      dark: nativeTheme.shouldUseDarkColors,
+      accent: ctx.accentColor(),
+      sidebarCollapsed: ctx.settings().sidebarCollapsed,
+      panel: this.panel,
+      htmlFullscreen: Boolean(this.htmlFullscreenTab),
+      windowFullscreen: this.win.isFullScreen(),
+      workspaces: this.isPrivate
+        ? []
+        : ctx.workspaces().map((w) => ({ id: w.id, name: w.name, icon: w.icon, isolated: Boolean(w.isolated), count: this.spaces.get(w.id)?.tabs.length || 0 })),
+      activeWorkspaceId: this.activeWorkspaceId,
+      tabs: s.tabs.map((t) => t.state()),
+      activeTabId: s.activeId,
+      split: s.split ? { ...s.split } : null,
+      panes: (this.panes || []).map((p) => ({ ...p, focused: p.tabId === s.activeId })),
+      nav,
+      find: { ...this.find },
+      downloads: downloads.summary(),
+      downloadList: this.panel === 'downloads' ? downloads.list().slice(0, 40) : [],
+      canReopen: this.closed.length > 0,
+    };
+  }
+
+  scheduleState() {
+    if (this.statePending) return;
+    this.statePending = true;
+    setImmediate(() => {
+      this.statePending = false;
+      if (this.ui.webContents.isDestroyed()) return;
+      const state = this.state();
+      this.ui.webContents.send('ui:state', state);
+      const title = state.nav?.title ? `${state.nav.title} - LionsBrows` : 'LionsBrows';
+      if (this.win.getTitle() !== title) this.win.setTitle(this.isPrivate ? `${title} (Private)` : title);
+    });
+  }
+
+  scheduleSave() {
+    if (!this.isPrivate) require('./session').scheduleSave();
+  }
+
+  serialize() {
+    const spaces = {};
+    for (const [id, s] of this.spaces) {
+      if (!s.tabs.length) continue;
+      const idx = (tabId) => s.tabs.findIndex((t) => t.id === tabId);
+      spaces[id] = {
+        tabs: s.tabs.map((t) => t.serialize()),
+        activeIndex: Math.max(0, idx(s.activeId)),
+        split: s.split ? [idx(s.split.a), idx(s.split.b), s.split.ratio] : null,
+      };
+    }
+    return {
+      bounds: this.win.getNormalBounds(),
+      maximized: this.win.isMaximized(),
+      activeWorkspaceId: this.activeWorkspaceId,
+      spaces,
+    };
+  }
+}
+
+module.exports = { BrowserWin, TOOLBAR_H };
