@@ -24,6 +24,7 @@
 - **Reader view:** one click turns cluttered articles into clean text, with font, size and light, sepia or dark themes.
 - **Import from other browsers:** bring over bookmarks and history from Chrome, Edge, Brave, Vivaldi, Opera and Firefox.
 - **Automatic updates:** new versions download in the background and install on restart.
+- **Streaming:** Netflix, Spotify, Disney+ and other services that use Widevine DRM, via castLabs' Electron for Content Security.
 - **English and German:** the language follows your system and can be changed in Settings.
 - **Everyday tools:** history, bookmarks with import and export, a download manager, find in page, zoom, full-page screenshots, a PDF viewer, spell check, session restore and a notes panel.
 
@@ -99,13 +100,17 @@ src/
   shared/    logo, icons and theme
 ```
 
-LionsBrows runs on [Electron](https://www.electronjs.org). Every page is sandboxed with context isolation and no Node.js access. Built-in `lions://` pages use a small API that the main process validates on every call.
+LionsBrows runs on [Electron](https://www.electronjs.org) (castLabs build with Widevine). Every page is sandboxed with context isolation and no Node.js access. Built-in `lions://` pages use a small API that the main process validates on every call.
+
+### Widevine signing
+
+LionsBrows uses [Electron for Content Security](https://github.com/castlabs/electron-releases) by castLabs, which installs Google's Widevine module on first launch. Services such as Netflix and Spotify also require a production VMP signature on Windows and macOS. The build signs automatically when the repository has the secrets `EVS_ACCOUNT_NAME` and `EVS_PASSWD` of a free [castLabs EVS](https://github.com/castlabs/electron-releases/wiki/EVS) account.
 
 ### Known limitations
 
 - Chrome Web Store extensions cannot be installed directly. Unpacked extensions can be loaded from *Settings → Extensions* (experimental).
 - There is no built-in password manager or sync.
-- Streaming services that need Widevine DRM (Netflix, Spotify, Disney+) don't play yet.
+- Some streaming services only play in builds that are VMP-signed with a castLabs EVS account (see below).
 - Automatic updates need the GitHub releases to be public.
 
 ## License

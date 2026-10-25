@@ -42,4 +42,8 @@ Automatic updates use [electron-updater](https://github.com/electron-userland/el
 
 ## Electron and Chromium
 
-LionsBrows is built on [Electron](https://www.electronjs.org) (MIT) and [Chromium](https://www.chromium.org) (BSD-style). Their license files ship with every build.
+LionsBrows is built on [Electron for Content Security](https://github.com/castlabs/electron-releases) by castLabs, a fork of [Electron](https://www.electronjs.org) (MIT) and [Chromium](https://www.chromium.org) (BSD-style). Their license files ship with every build.
+
+## Widevine
+
+The Widevine Content Decryption Module is proprietary software by Google. It is not part of LionsBrows; it is downloaded from Google on first launch through Chromium's component updater.

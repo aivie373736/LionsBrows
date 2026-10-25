@@ -12,6 +12,7 @@ const ALWAYS_ALLOW = new Set([
   'speaker-selection',
   'storage-access',
   'top-level-storage-access',
+  'mediaKeySystem',
 ]);
 
 const DESCRIPTIONS = {
@@ -23,7 +24,6 @@ const DESCRIPTIONS = {
   'idle-detection': 'know when you are actively using this device',
   'window-management': 'manage windows on all your displays',
   'display-capture': 'see your screen',
-  mediaKeySystem: 'play protected content',
   fileSystem: 'edit files on your device',
 };
 

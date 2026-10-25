@@ -299,6 +299,22 @@ await step('reader view shows a clean, safe version of articles', async () => {
   await until(() => main((ctx, r, w, url) => w.activeTab().url === url, `${BASE}/article`), 'back to the article');
 });
 
+await step('Widevine is available for protected content', async () => {
+  const status = await main(async (ctx, r) => {
+    const { components } = r('electron');
+    await components.whenReady();
+    return components.status();
+  });
+  assert.ok(Object.values(status).some((c) => /Widevine/.test(c.title)), JSON.stringify(status));
+  const page = await activePage(app, main);
+  const supported = await page.evaluate(() =>
+    navigator
+      .requestMediaKeySystemAccess('com.widevine.alpha', [{ initDataTypes: ['cenc'], videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }] }])
+      .then(() => true, (err) => String(err)),
+  );
+  assert.equal(supported, true);
+});
+
 await step('bookmarks', async () => {
   await main((ctx, r) => r('./actions').run('bookmark', ctx.lastFocusedWindow()));
   assert.equal(await main((ctx, r, w) => r('./bookmarks').has(w.activeTab().displayUrl)), true);

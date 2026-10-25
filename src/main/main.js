@@ -112,6 +112,7 @@ async function start() {
     new BrowserWin({ urls: pendingUrls });
   }
   setImmediate(() => adblock.init().catch((err) => console.warn('[adblock]', err.message)));
+  require('electron').components?.whenReady?.().catch((err) => console.warn('[widevine]', err.message));
 
   require('./memory').start();
   require('./updater').start();
