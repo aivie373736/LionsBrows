@@ -1,27 +1,25 @@
 'use strict';
 
-// Search engines selectable in Settings. `suggest` endpoints return the
-// OpenSearch suggestion format: [query, [suggestion, ...]].
 const ENGINES = {
-  duckduckgo: {
-    name: 'DuckDuckGo',
-    search: 'https://duckduckgo.com/?q=%s',
-    suggest: 'https://duckduckgo.com/ac/?q=%s&type=list',
-  },
   google: {
     name: 'Google',
     search: 'https://www.google.com/search?q=%s',
     suggest: 'https://suggestqueries.google.com/complete/search?client=firefox&q=%s',
   },
-  brave: {
-    name: 'Brave Search',
-    search: 'https://search.brave.com/search?q=%s',
-    suggest: 'https://search.brave.com/api/suggest?q=%s',
+  duckduckgo: {
+    name: 'DuckDuckGo',
+    search: 'https://duckduckgo.com/?q=%s',
+    suggest: 'https://duckduckgo.com/ac/?q=%s&type=list',
   },
   bing: {
     name: 'Bing',
     search: 'https://www.bing.com/search?q=%s',
     suggest: 'https://api.bing.com/osjson.aspx?query=%s',
+  },
+  brave: {
+    name: 'Brave Search',
+    search: 'https://search.brave.com/search?q=%s',
+    suggest: 'https://search.brave.com/api/suggest?q=%s',
   },
   ecosia: {
     name: 'Ecosia',
@@ -33,9 +31,18 @@ const ENGINES = {
     search: 'https://www.startpage.com/sp/search?query=%s',
     suggest: null,
   },
+  qwant: {
+    name: 'Qwant',
+    search: 'https://www.qwant.com/?q=%s',
+    suggest: null,
+  },
+  yahoo: {
+    name: 'Yahoo',
+    search: 'https://search.yahoo.com/search?p=%s',
+    suggest: null,
+  },
 };
 
-// "Bangs": type `!yt lofi beats` in the command bar to search a site directly.
 const BANGS = {
   g: { name: 'Google', url: 'https://www.google.com/search?q=%s' },
   ddg: { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },
@@ -53,8 +60,25 @@ const BANGS = {
   amz: { name: 'Amazon', url: 'https://www.amazon.de/s?k=%s' },
 };
 
+let custom = null;
+
+function setCustomEngine(name, url) {
+  custom = isValidTemplate(url) ? { name: (name || '').trim() || 'Custom search', search: url.trim(), suggest: null } : null;
+}
+
+function isValidTemplate(url) {
+  return typeof url === 'string' && /^https?:\/\/\S+$/i.test(url.trim()) && url.includes('%s');
+}
+
 function engine(id) {
-  return ENGINES[id] || ENGINES.duckduckgo;
+  if (id === 'custom' && custom) return custom;
+  return ENGINES[id] || ENGINES.google;
+}
+
+function list() {
+  const all = Object.entries(ENGINES).map(([id, e]) => ({ id, name: e.name }));
+  if (custom) all.push({ id: 'custom', name: custom.name });
+  return all;
 }
 
 function fill(template, query) {
@@ -65,7 +89,6 @@ function searchUrl(engineId, query) {
   return fill(engine(engineId).search, query);
 }
 
-// Returns { bang, query, url } when the input starts or ends with a known bang.
 function parseBang(input) {
   const m = input.trim().match(/^!(\w+)\s+(.+)$/) || input.trim().match(/^(.+?)\s+!(\w+)$/);
   if (!m) return null;
@@ -75,4 +98,4 @@ function parseBang(input) {
   return { bang: key.toLowerCase(), name: bang.name, query, url: fill(bang.url, query) };
 }
 
-module.exports = { ENGINES, BANGS, engine, searchUrl, parseBang };
+module.exports = { ENGINES, BANGS, engine, list, searchUrl, parseBang, setCustomEngine, isValidTemplate };

@@ -1,8 +1,5 @@
 'use strict';
 
-// Native menus: right-click on a page, on a tab, the ⋯ menu, the shield
-// (ad blocker) menu, the workspace menu and the macOS application menu.
-
 const { Menu, clipboard, dialog, app } = require('electron');
 const { ctx } = require('./context');
 const { engine, searchUrl } = require('./search-engines');
@@ -15,7 +12,6 @@ const SEP = { type: 'separator' };
 const isMac = process.platform === 'darwin';
 
 function tidy(template) {
-  // Drop leading, trailing and doubled separators.
   const out = [];
   for (const item of template) {
     if (!item) continue;
@@ -36,7 +32,6 @@ function short(text, n = 28) {
   return t.length > n ? `${t.slice(0, n)}…` : t;
 }
 
-/** Shortcut hint shown in menus; the shortcut itself is handled in shortcuts.js. */
 function acc(id) {
   const a = accelerator(id);
   return a ? { accelerator: a, registerAccelerator: false } : {};
@@ -148,7 +143,7 @@ function tabMenu(w, tabId) {
     { label: 'Open in split view', enabled: !visible, click: () => w.splitWith(tab.id) },
     { label: 'Put tab to sleep', enabled: !visible && !tab.sleeping, click: () => w.sleepTab(tab.id) },
     !w.isPrivate && others.length
-      ? { label: 'Move to workspace', submenu: others.map((ws) => ({ label: `${ws.icon}  ${ws.name}`, click: () => w.moveTabToWorkspace(tab.id, ws.id) })) }
+      ? { label: 'Move to workspace', submenu: others.map((ws) => ({ label: ws.name, click: () => w.moveTabToWorkspace(tab.id, ws.id) })) }
       : null,
     { label: 'Copy link', enabled: !tab.url.startsWith('lions://newtab'), click: () => clipboard.writeText(tab.displayUrl) },
     SEP,
@@ -196,6 +191,15 @@ function mainMenu(w, x, y) {
         ],
       },
       SEP,
+      {
+        label: 'Customize',
+        submenu: [
+          { label: 'Tabs on the side', type: 'checkbox', checked: !w.horizontal, click: () => ctx.setSetting('layout', w.horizontal ? 'vertical' : 'horizontal') },
+          { label: 'Bookmarks toolbar', type: 'checkbox', checked: ctx.settings().showBookmarksBar, click: () => ctx.setSetting('showBookmarksBar', !ctx.settings().showBookmarksBar) },
+          SEP,
+          { label: 'Colors and background…', click: () => w.newTab({ url: 'lions://settings/#appearance' }) },
+        ],
+      },
       { label: 'Settings', ...acc('settings'), click: () => run('settings', w) },
       { label: 'About LionsBrows', click: () => w.newTab({ url: 'lions://settings/#about' }) },
       isMac ? null : SEP,
@@ -246,7 +250,7 @@ function workspaceMenu(w, wsId, x, y) {
     [
       { label: `Switch to ${ws.name}`, enabled: w.activeWorkspaceId !== ws.id, click: () => w.switchWorkspace(ws.id) },
       { label: 'Rename…', click: () => w.openPalette('prompt', { title: 'Rename workspace', action: `renameWorkspace:${ws.id}`, value: ws.name }) },
-      { label: 'Icon', submenu: workspaces.ICONS.map((icon) => ({ label: icon, type: 'radio', checked: ws.icon === icon, click: () => workspaces.setIcon(ws.id, icon) })) },
+      { label: 'Color', submenu: Object.entries(workspaces.COLOR_NAMES).map(([color, name]) => ({ label: name, type: 'radio', checked: ws.color === color, click: () => workspaces.setColor(ws.id, color) })) },
       {
         label: 'Separate logins and cookies',
         sublabel: 'Sign in to different accounts here',
@@ -276,7 +280,79 @@ function workspaceMenu(w, wsId, x, y) {
   );
 }
 
-/** The menu bar on macOS. Elsewhere the ⋯ menu replaces it. */
+function workspaceSwitcher(w, x, y) {
+  const current = ctx.workspace(w.activeWorkspaceId);
+  popup(
+    w,
+    [
+      ...ctx.workspaces().map((ws) => ({
+        label: ws.name,
+        type: 'radio',
+        checked: ws.id === w.activeWorkspaceId,
+        click: () => w.switchWorkspace(ws.id),
+      })),
+      SEP,
+      { label: 'New workspace…', click: () => run('newWorkspace', w) },
+      { label: `Rename “${current.name}”…`, click: () => w.openPalette('prompt', { title: 'Rename workspace', action: `renameWorkspace:${current.id}`, value: current.name }) },
+      { label: 'Color', submenu: Object.entries(workspaces.COLOR_NAMES).map(([color, name]) => ({ label: name, type: 'radio', checked: current.color === color, click: () => workspaces.setColor(current.id, color) })) },
+      {
+        label: 'Separate logins and cookies',
+        type: 'checkbox',
+        checked: Boolean(current.isolated),
+        click: () => workspaces.setIsolated(current.id, !current.isolated),
+      },
+      {
+        label: `Delete “${current.name}”…`,
+        enabled: ctx.workspaces().length > 1,
+        click: async () => {
+          const { response } = await dialog.showMessageBox(w.win, {
+            type: 'warning',
+            buttons: ['Delete', 'Cancel'],
+            defaultId: 1,
+            cancelId: 1,
+            message: `Delete the workspace “${current.name}”?`,
+            detail: 'Its tabs will be moved to another workspace.',
+          });
+          if (response === 0) workspaces.remove(current.id);
+        },
+      },
+    ],
+    { x: Math.round(x), y: Math.round(y) },
+  );
+}
+
+function allTabsMenu(w, x, y) {
+  const tabs = w.space().tabs;
+  popup(
+    w,
+    tabs.map((t) => ({
+      label: short(t.title || t.displayUrl || 'New Tab', 60),
+      type: 'checkbox',
+      checked: t.id === w.space().activeId,
+      click: () => w.activate(t.id),
+    })),
+    { x: Math.round(x), y: Math.round(y) },
+  );
+}
+
+function bookmarkMenu(w, id) {
+  const b = require('./bookmarks')
+    .all()
+    .find((x) => x.id === id);
+  if (!b) return;
+  popup(w, [
+    { label: 'Open in new tab', click: () => w.newTab({ url: b.url, background: true, afterId: w.space().activeId }) },
+    { label: 'Open in split view', click: () => w.openInSplit(b.url) },
+    { label: 'Open in private window', click: () => openWindow({ isPrivate: true, urls: [b.url] }) },
+    SEP,
+    { label: 'Copy link', click: () => clipboard.writeText(b.url) },
+    { label: 'Delete bookmark', click: () => require('./bookmarks').remove(b.id) },
+    SEP,
+    { label: 'Manage bookmarks', click: () => openInternal(w, 'bookmarks') },
+    { label: 'Hide bookmarks toolbar', click: () => ctx.setSetting('showBookmarksBar', false) },
+  ]);
+}
+
 function installAppMenu() {
   if (!isMac) {
     Menu.setApplicationMenu(null);
@@ -313,4 +389,4 @@ function installAppMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-module.exports = { pageMenu, tabMenu, mainMenu, shieldMenu, workspaceMenu, installAppMenu, openInternal };
+module.exports = { pageMenu, tabMenu, mainMenu, shieldMenu, workspaceMenu, workspaceSwitcher, allTabsMenu, bookmarkMenu, installAppMenu, openInternal };

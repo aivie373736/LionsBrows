@@ -1,9 +1,7 @@
-/* Shared styles for lions:// pages (settings, history, bookmarks, downloads). */
-
 body {
   min-height: 100vh;
-  background: var(--bg);
-  font-size: 14px;
+  background: var(--page);
+  font-size: 15px;
 }
 
 a {
@@ -11,9 +9,9 @@ a {
 }
 
 .page {
-  max-width: 880px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 32px 28px 80px;
+  padding: 44px 32px 80px;
 }
 
 .page-head {
@@ -28,9 +26,8 @@ a {
 }
 .page-head h1 {
   margin: 0;
-  font-size: 24px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: 28px;
+  font-weight: 600;
 }
 .page-head .spacer {
   flex: 1;
@@ -38,8 +35,8 @@ a {
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
   overflow: hidden;
 }
 .card + .card,
@@ -49,7 +46,7 @@ a {
 .section-title {
   margin: 34px 4px 0;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 600;
   scroll-margin-top: 20px;
 }
 .section-sub {
@@ -83,9 +80,9 @@ input[type='search'],
 select {
   height: 34px;
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--border-strong);
-  background: var(--surface-2);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
   outline: none;
@@ -97,18 +94,23 @@ select:focus {
 }
 .search-input {
   width: 100%;
-  height: 42px;
-  font-size: 15px;
-  padding: 0 16px;
-  border-radius: 11px;
+  height: 50px;
+  font-size: 16px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border-width: 2px;
+  margin-bottom: 8px;
+}
+.search-input:focus {
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .button {
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface-2);
+  height: 38px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: transparent;
   color: var(--text);
   font-weight: 500;
   display: inline-flex;
@@ -117,11 +119,11 @@ select:focus {
   white-space: nowrap;
 }
 .button:hover {
-  background: var(--bg-hover);
+  background: var(--accent-soft);
 }
 .button.primary {
   background: var(--accent);
-  border-color: transparent;
+  border-color: var(--accent);
   color: var(--on-accent);
 }
 .button.primary:hover {
@@ -129,6 +131,7 @@ select:focus {
 }
 .button.danger {
   color: var(--danger);
+  border-color: var(--danger);
 }
 .icon-btn {
   width: 30px;
@@ -147,7 +150,6 @@ select:focus {
   color: var(--text);
 }
 
-/* toggle switch */
 .switch {
   position: relative;
   width: 40px;
@@ -190,16 +192,15 @@ select:focus {
   outline-offset: 2px;
 }
 
-/* list rows (history, bookmarks, downloads) */
 .list-item {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 0 10px 0 16px;
-  height: 48px;
+  padding: 0 12px 0 20px;
+  height: 54px;
 }
 .list-item + .list-item {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-strong);
 }
 .list-item:hover {
   background: var(--surface-2);
@@ -245,20 +246,21 @@ select:focus {
   min-width: 0;
 }
 .day {
-  margin: 26px 4px 8px;
+  margin: 30px 6px 10px;
+  font-size: 17px;
   font-weight: 600;
-  color: var(--text-2);
+  color: var(--text);
 }
 .empty-state {
   padding: 60px 20px;
   text-align: center;
   color: var(--text-3);
 }
-.empty-state .logo {
-  width: 72px;
-  height: 72px;
-  opacity: 0.9;
-  margin-bottom: 10px;
+.empty-state .empty-icon {
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  color: var(--text-3);
 }
 
 .toast {

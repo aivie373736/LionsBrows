@@ -1,8 +1,5 @@
 'use strict';
 
-// The command bar (Ctrl+K / Ctrl+L / clicking the address bar): one box to
-// open sites, search, switch tabs and workspaces, run commands and do math.
-
 const { clipboard, net } = require('electron');
 const { ctx } = require('./context');
 const omnibox = require('./omnibox');
@@ -23,7 +20,7 @@ function formatNumber(n) {
 
 function tabItem(win, t) {
   const ws = win.isPrivate ? null : ctx.workspace(t.workspaceId);
-  const where = ws && ctx.workspaces().length > 1 ? `${ws.icon} ${ws.name} · ` : '';
+  const where = ws && ctx.workspaces().length > 1 ? `${ws.name} · ` : '';
   return { type: 'tab', id: t.id, title: t.title || 'New Tab', subtitle: `${where}${omnibox.displayUrl(t.displayUrl) || 'New Tab'}`, favicon: t.favicon, dedupe: t.displayUrl };
 }
 
@@ -88,7 +85,7 @@ function query(win, text, mode) {
   if (!win.isPrivate) {
     for (const w of ctx.workspaces()) {
       if (w.id !== win.activeWorkspaceId && matches(`${w.name} workspace`, words)) {
-        push({ type: 'workspace', id: w.id, title: `Switch to ${w.icon} ${w.name}`, subtitle: 'Workspace' });
+        push({ type: 'workspace', id: w.id, title: `Switch to ${w.name}`, subtitle: 'Workspace' });
       }
     }
   }

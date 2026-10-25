@@ -14,42 +14,46 @@ let host = url;
 try {
   host = new URL(url).host;
 } catch {
-  /* keep the raw text */
 }
 
 const n = Number(code);
-let title = 'This page couldn’t load';
+let title = 'This page isn’t working';
 let text = 'Something went wrong while loading this page.';
+let glyph = 'globe';
 
 if (code === 'crash') {
-  title = 'This tab crashed';
-  text = 'The page stopped working. Reloading usually fixes it.';
+  title = 'This page crashed';
+  text = 'Something went wrong while displaying this page. Reloading usually fixes it.';
+  glyph = 'triangle-alert';
 } else if (n === -105 || n === -137) {
-  title = 'Hmm. LionsBrows can’t find that site';
-  text = `We couldn’t find the server for ${host}. Check the address for typos.`;
+  title = 'This site can’t be reached';
+  text = `Check if there is a typo in ${host}.`;
 } else if (n === -106) {
-  title = 'You’re offline';
-  text = 'Check your Wi-Fi or network cable, then try again.';
+  title = 'No internet connection';
+  text = 'Check your network connection and try again.';
 } else if (n === -102) {
-  title = 'The site refused to connect';
-  text = `${host} isn’t accepting connections right now.`;
+  title = 'This site can’t be reached';
+  text = `${host} refused to connect.`;
 } else if (n === -118 || n === -7) {
-  title = 'The site took too long to respond';
-  text = `${host} might be busy or down.`;
+  title = 'This site can’t be reached';
+  text = `${host} took too long to respond.`;
 } else if (n === -21) {
-  title = 'Your network changed';
-  text = 'The connection was interrupted by a network change.';
+  title = 'Your connection was interrupted';
+  text = 'A network change was detected.';
 } else if (n <= -200 && n > -300) {
   title = 'Your connection isn’t private';
-  text = `The security certificate for ${host} isn’t valid, so LionsBrows stopped loading it. Attackers might be trying to steal your information.`;
+  text = `LionsBrows stopped loading ${host} because its security certificate isn’t valid. Someone could be trying to intercept your information.`;
+  glyph = 'lock';
 } else if (n === -20) {
-  title = 'This page was blocked';
-  text = 'An extension or setting blocked this page.';
+  title = 'This page has been blocked';
+  text = 'A setting or extension blocked this page.';
+  glyph = 'shield';
 } else if (n === -300) {
-  title = 'That address isn’t valid';
+  title = 'Invalid address';
   text = 'Check the address and try again.';
 }
 
+document.getElementById('icon').innerHTML = icon(glyph, 48);
 document.title = title;
 document.getElementById('title').textContent = title;
 document.getElementById('desc').textContent = text;

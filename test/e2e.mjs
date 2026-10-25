@@ -1,11 +1,3 @@
-// End-to-end test: launches the real browser with a throwaway profile, drives
-// it through Playwright, and checks that the main features work.
-//
-//   Linux (headless):  xvfb-run -a npm run test:e2e
-//   Needs Playwright:  npm i -g playwright   (or npm i -D playwright)
-//
-// Set SHOTS=<dir> to also save screenshots (Linux/Xvfb only, uses ImageMagick).
-
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -29,8 +21,6 @@ const SHOTS = process.env.SHOTS;
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'lionsbrows-e2e-'));
 const downloadsDir = path.join(profile, 'dl');
 fs.mkdirSync(downloadsDir);
-
-// ------------------------------------------------------------------ test site
 
 const PAGES = {
   '/': `<title>Lion Test Home</title><h1>Welcome to the lion test page</h1>
@@ -58,8 +48,6 @@ const server = http.createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const BASE = `http://127.0.0.1:${server.address().port}`;
-
-// ------------------------------------------------------------------ helpers
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -90,8 +78,6 @@ async function launch() {
     args: [root, '--no-sandbox'],
     env: { ...process.env, LIONSBROWS_USER_DATA: profile, LIONSBROWS_TEST: '1' },
   });
-  // Evaluate in the main process with access to our modules.
-  // Surface main-process errors in the test output.
   app.process().stderr.on('data', (d) => {
     const text = String(d);
     if (/\[main\]|Error:/.test(text) && !/Failed to load URL/.test(text)) {
@@ -99,7 +85,6 @@ async function launch() {
       process.stdout.write(`    [main] ${text}`);
     }
   });
-  // Only plain data comes back (windows/tabs are circular native objects).
   const main = (fn, arg) => app.evaluate(async ({}, [src, a]) => {
     const { ctx, require } = globalThis.lionsTest;
     const w = ctx.lastFocusedWindow();
@@ -119,6 +104,17 @@ async function pageFor(app, predicate) {
   return until(() => app.windows().find((p) => predicate(p.url())), 'page');
 }
 
+async function activePage(app, main) {
+  const mark = `tab-${Date.now()}-${Math.random()}`;
+  await until(() => main((ctx, r, w, m) => w.activeTab().wc.executeJavaScript(`window.e2eMark = ${JSON.stringify(m)}; true`), mark), 'mark active tab');
+  return until(async () => {
+    for (const p of app.windows()) {
+      if ((await p.evaluate(() => window.e2eMark).catch(() => null)) === mark) return p;
+    }
+    return null;
+  }, 'active tab page');
+}
+
 const results = [];
 const mainErrors = [];
 async function step(name, fn) {
@@ -132,8 +128,6 @@ async function step(name, fn) {
     console.log(`  ✗ ${name}\n    ${err.stack || err}`);
   }
 }
-
-// ------------------------------------------------------------------ the test
 
 console.log(`LionsBrows e2e · profile ${profile}`);
 let { app, main } = await launch();
@@ -158,9 +152,8 @@ await step('navigates, records history and shows the address', async () => {
 });
 
 await step('ad blocker blocks known ad/tracker scripts', async () => {
-  // Filter lists download on first start (a few MB); wait for them, then reload.
   await until(() => main((ctx, r) => r('./adblock').isReady()), 'filter lists', 90000);
-  await main((ctx, r, w) => w.activeTab().reload(true)); // bypass the cache
+  await main((ctx, r, w) => w.activeTab().reload(true));
   const blocked = await until(() => main((ctx, r, w) => w.activeTab().blocked), 'blocked count > 0', 30000);
   assert.ok(blocked >= 1);
   shot('02-page');
@@ -272,7 +265,7 @@ await step('workspaces keep their own tabs', async () => {
   assert.equal(await main((ctx, r, w) => w.space().tabs.length), 1);
   assert.equal(await main((ctx, r, w) => w.activeWorkspaceId), wsId);
   const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
-  await ui.waitForSelector('.ws.active');
+  await until(async () => (await ui.textContent('#ws-button')) === 'W', 'workspace button shows the new workspace');
   await wait(300);
   shot('06-workspace');
   await main((ctx, r, w) => w.switchWorkspace('home'));
@@ -285,7 +278,6 @@ await step('notes are saved to the workspace they were written in', async () => 
   await ui.waitForSelector('#panel-notes:not([hidden]) #notes');
   await wait(200);
   await ui.fill('#notes', 'roar notes');
-  // Switch right away, before the autosave timer fires.
   const other = await main((ctx) => ctx.workspaces().find((x) => x.id !== 'home').id);
   await main((ctx, r, w, id) => w.switchWorkspace(id), other);
   await until(() => main((ctx) => ctx.notes.get('home') === 'roar notes'), 'notes saved to Home');
@@ -296,12 +288,67 @@ await step('notes are saved to the workspace they were written in', async () => 
   });
 });
 
+await step('search engine can be picked on the new tab page', async () => {
+  await main((ctx, r, w) => w.newTab());
+  const nt = await activePage(app, main);
+  await nt.waitForSelector('#engine-btn .engine-logo');
+  await nt.click('#engine-btn', { force: true });
+  await nt.waitForSelector('#engine-menu:not([hidden]) .engine-item');
+  shot('07-engines');
+  await nt.click('.engine-item:has-text("DuckDuckGo")', { force: true });
+  await until(() => main((ctx) => ctx.settings().searchEngine === 'duckduckgo'), 'engine saved');
+  assert.match(await nt.getAttribute('#search', 'placeholder'), /DuckDuckGo/);
+  await nt.fill('#search', 'lion facts');
+  await nt.press('#search', 'Enter');
+  await until(
+    () => main((ctx, r, w) => [w.activeTab().displayUrl, w.activeTab().wc.getURL()].some((u) => u.includes('duckduckgo.com'))),
+    'searched with DuckDuckGo',
+  );
+  await main((ctx) => ctx.setSetting('searchEngine', 'google'));
+});
+
+await step('your own video plays as the new tab background', async () => {
+  await main((ctx, r, w) => w.newTab());
+  const nt = await activePage(app, main);
+  await nt.waitForSelector('#customize-btn');
+  const type = await nt.evaluate((file) => window.lions.call('useBackgroundFile', file, 'video').then((b) => b.type), path.join(root, 'test/fixtures/background.webm'));
+  assert.equal(type, 'video');
+  const playing = await until(
+    () => nt.evaluate(() => {
+      const v = document.querySelector('#bg video');
+      return v && !v.paused && v.readyState >= 2 && v.currentTime > 0;
+    }),
+    'video playing',
+  );
+  assert.ok(playing);
+  await nt.click('#customize-btn', { force: true });
+  await nt.waitForSelector('#customize:not([hidden]) .bg-option.on');
+  await wait(400);
+  shot('08-video-background');
+  await nt.evaluate(() => window.lions.call('clearBackground'));
+  await until(() => nt.evaluate(() => !document.querySelector('#bg video')), 'background cleared');
+});
+
+await step('custom colors and the tabs-on-the-side layout', async () => {
+  const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
+  await main((ctx) => ctx.setSettings({ frameColor: '#1d3557', accent: '#2ea043' }));
+  await until(() => ui.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() === '#1d3557'), 'toolbar color applied');
+  await main((ctx) => ctx.setSetting('layout', 'vertical'));
+  await until(() => ui.evaluate(() => document.body.classList.contains('v') && getComputedStyle(document.getElementById('sidebar')).display !== 'none'), 'sidebar shown');
+  const x = await main((ctx, r, w) => w.panes[0].x);
+  assert.ok(x >= 200, `page starts after the sidebar (x=${x})`);
+  await wait(500);
+  shot('09-vertical-custom-colors');
+  await main((ctx) => ctx.setSettings({ layout: 'horizontal', frameColor: '', accent: '#ee801b' }));
+  await until(() => ui.evaluate(() => document.body.classList.contains('h')), 'back to tabs on top');
+});
+
 await step('downloads save to the downloads folder', async () => {
   await main((ctx, r, w, url) => w.activeTab().wc.downloadURL(url), `${BASE}/download`);
   await until(() => main((ctx, r) => r('./downloads').list().some((d) => d.state === 'completed')), 'download done');
   assert.ok(fs.existsSync(path.join(downloadsDir, 'roar.txt')));
   await wait(300);
-  shot('07-downloads');
+  shot('10-downloads');
   await main((ctx, r, w) => w.panel && w.togglePanel(w.panel));
 });
 
@@ -310,7 +357,7 @@ await step('unreachable sites show the error page', async () => {
   await until(() => main((ctx, r, w) => w.activeTab().url.startsWith('lions://error')), 'error page');
   assert.equal(await main((ctx, r, w) => w.activeTab().displayUrl), 'http://127.0.0.1:9/');
   await wait(400);
-  shot('08-error');
+  shot('11-error');
 });
 
 await step('settings and history pages render', async () => {
@@ -318,19 +365,19 @@ await step('settings and history pages render', async () => {
   const hist = await pageFor(app, (u) => u.startsWith('lions://history'));
   await hist.waitForSelector('.list-item a.title');
   await wait(300);
-  shot('09-history');
+  shot('12-history');
   await main((ctx, r, w) => r('./actions').run('settings', w));
   const settings = await pageFor(app, (u) => u.startsWith('lions://settings'));
   await settings.waitForSelector('#privacy');
   await wait(400);
-  shot('10-settings');
+  shot('13-settings');
 });
 
 await step('dark mode', async () => {
   await main((ctx) => ctx.setSetting('theme', 'dark'));
   await main((ctx, r, w) => w.newTab());
   await wait(900);
-  shot('11-dark');
+  shot('14-dark');
   await main((ctx) => ctx.setSetting('theme', 'system'));
 });
 
@@ -343,7 +390,7 @@ await step('private windows use a separate, in-memory session', async () => {
   });
   assert.match(partition, /^lions-private-/);
   await wait(800);
-  shot('12-private');
+  shot('15-private');
   await main((ctx) => [...ctx.windows].find((w) => w.isPrivate).win.close());
 });
 

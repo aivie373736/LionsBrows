@@ -1,8 +1,5 @@
 'use strict';
 
-// Small JSON-file store with debounced, atomic writes (write to a temp file,
-// then rename) so a crash mid-write never leaves a half-written file behind.
-
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -52,8 +49,6 @@ class JsonStore {
   }
 }
 
-// Fill in keys missing from `raw` with defaults (one level of nested objects),
-// so settings added in a newer version get their default values.
 function mergeDefaults(defaults, raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return defaults;
   for (const [k, v] of Object.entries(raw)) {

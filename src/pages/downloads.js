@@ -31,7 +31,7 @@ async function render() {
   const items = (await api.call('downloadsList')).filter((d) => !query || d.filename.toLowerCase().includes(query.toLowerCase()));
   list.textContent = '';
   if (!items.length) {
-    list.append(el('div', { class: 'empty-state' }, el('img', { class: 'logo', src: 'lions://assets/logo.svg', alt: '' }), el('div', {}, query ? 'No downloads match.' : 'Files you download will show up here.')));
+    list.append(el('div', { class: 'empty-state' }, el('div', { class: 'empty-icon', html: icon('download', 40) }), el('div', {}, query ? 'No downloads match.' : 'Files you download will show up here.')));
     return;
   }
   list.append(el('div', { class: 'card' }, ...items.map(row)));

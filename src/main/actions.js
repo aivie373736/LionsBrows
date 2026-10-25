@@ -1,8 +1,5 @@
 'use strict';
 
-// Every command LionsBrows can run, in one place. Keyboard shortcuts, the
-// command bar (Ctrl+K) and the menus all go through this table.
-
 const fs = require('node:fs');
 const { clipboard, dialog, shell } = require('electron');
 const { ctx } = require('./context');
@@ -47,7 +44,6 @@ async function screenshot(w) {
   if (!wc) return;
   let png;
   try {
-    // Full-page capture through the DevTools protocol...
     wc.debugger.attach('1.3');
     const metrics = await wc.debugger.sendCommand('Page.getLayoutMetrics');
     const size = metrics.cssContentSize || metrics.contentSize;
@@ -58,7 +54,6 @@ async function screenshot(w) {
     });
     png = Buffer.from(data, 'base64');
   } catch {
-    // ...or just the visible part if that's not possible (e.g. DevTools are open).
     png = (await wc.capturePage()).toPNG();
   } finally {
     if (wc.debugger.isAttached()) wc.debugger.detach();
@@ -175,7 +170,6 @@ function run(id, w, ...args) {
   }
 }
 
-/** "mod+shift+t" -> "CmdOrCtrl+Shift+T" for Electron menus. */
 function accelerator(id) {
   const key = ACTIONS[id]?.keys?.[0];
   if (!key) return undefined;
@@ -197,7 +191,6 @@ function accelerator(id) {
     .join('+');
 }
 
-/** Human-readable shortcut, e.g. "Ctrl+Shift+T" or "⌘⇧T". */
 function shortcutLabel(id) {
   const acc = accelerator(id);
   if (!acc) return '';

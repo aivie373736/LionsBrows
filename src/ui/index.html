@@ -7,53 +7,65 @@
     <link rel="stylesheet" href="../shared/theme.css" />
     <link rel="stylesheet" href="ui.css" />
   </head>
-  <body>
+  <body class="h">
+    <header id="tabstrip">
+      <button class="btn" id="ws-button" title="Workspaces"></button>
+      <div id="htabs">
+        <div id="hpinned"></div>
+        <div id="hlist" role="tablist" aria-label="Tabs"></div>
+      </div>
+      <button class="btn" id="hnew" title="New tab"></button>
+      <div class="strip-space"></div>
+      <button class="btn" id="btn-alltabs" title="List all tabs"></button>
+    </header>
+
     <header id="toolbar">
       <div class="tb-left">
-        <button class="btn no-drag" id="btn-sidebar" title="Show / hide sidebar"></button>
-        <button class="btn no-drag" id="btn-back" title="Back"></button>
-        <button class="btn no-drag" id="btn-forward" title="Forward"></button>
-        <button class="btn no-drag" id="btn-reload" title="Reload"></button>
+        <button class="btn" id="btn-sidebar" title="Show / hide sidebar"></button>
+        <button class="btn" id="btn-back" title="Back"></button>
+        <button class="btn" id="btn-forward" title="Forward"></button>
+        <button class="btn" id="btn-reload" title="Reload"></button>
       </div>
       <div class="tb-center">
         <div id="address" class="no-drag" role="button" tabindex="0" title="Search or enter address">
+          <button id="addr-shield" class="pill" title="Ad blocker"></button>
           <span id="addr-icon"></span>
           <span id="addr-text"></span>
           <span class="addr-actions">
             <button id="addr-zoom" class="pill" title="Reset zoom" hidden></button>
-            <button id="addr-shield" class="pill" title="Ad blocker"></button>
             <button id="addr-star" class="mini" title="Bookmark this page"></button>
           </span>
         </div>
       </div>
       <div class="tb-right">
         <span id="private-chip" hidden></span>
-        <button class="btn no-drag" id="btn-split" title="Split view"></button>
-        <button class="btn no-drag" id="btn-notes" title="Notes"></button>
-        <button class="btn no-drag" id="btn-downloads" title="Downloads"></button>
-        <button class="btn no-drag" id="btn-menu" title="Menu"></button>
-        <div id="wco-spacer"></div>
+        <button class="btn" id="btn-split" title="Split view"></button>
+        <button class="btn" id="btn-notes" title="Notes"></button>
+        <button class="btn" id="btn-downloads" title="Downloads"></button>
+        <button class="btn" id="btn-menu" title="Open menu"></button>
       </div>
     </header>
 
-    <div id="findbar" hidden>
-      <input id="find-input" type="text" placeholder="Find in page" spellcheck="false" autocomplete="off" />
-      <span id="find-count"></span>
-      <button class="btn" id="find-prev" title="Previous (Shift+Enter)"></button>
-      <button class="btn" id="find-next" title="Next (Enter)"></button>
-      <button class="btn" id="find-close" title="Close (Esc)"></button>
-    </div>
+    <nav id="bookmarks-bar" hidden></nav>
 
     <aside id="sidebar">
       <div id="pinned"></div>
       <button id="new-tab" title="New tab"></button>
       <div id="tabs" role="tablist" aria-label="Tabs"></div>
-      <div id="sidebar-drop" aria-hidden="true"></div>
       <footer id="sidebar-footer">
         <div id="workspaces"></div>
         <button class="btn" id="btn-settings" title="Settings"></button>
       </footer>
     </aside>
+
+    <div id="findbar" hidden>
+      <input id="find-input" type="text" placeholder="Find in page" spellcheck="false" autocomplete="off" />
+      <button class="btn" id="find-prev" title="Previous (Shift+Enter)"></button>
+      <button class="btn" id="find-next" title="Next (Enter)"></button>
+      <span id="find-count"></span>
+      <span class="find-space"></span>
+      <button class="btn" id="find-close" title="Close (Esc)"></button>
+    </div>
 
     <section id="panel" hidden>
       <header class="panel-head">

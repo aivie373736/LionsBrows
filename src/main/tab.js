@@ -1,8 +1,5 @@
 'use strict';
 
-// One browser tab. A tab can be "asleep" (no WebContentsView, just a URL,
-// title and its back/forward history) to save memory; it wakes up when shown.
-
 const path = require('node:path');
 const { WebContentsView, dialog, nativeTheme } = require('electron');
 const { ctx } = require('./context');
@@ -11,7 +8,7 @@ const sessions = require('./sessions');
 const PAGE_PRELOAD = path.join(__dirname, '..', 'preload', 'page.js');
 const NEWTAB = 'lions://newtab/';
 const ZOOM_FACTORS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
-const DARK_BG = '#1b1916';
+const DARK_BG = '#141317';
 
 let nextId = 1;
 
@@ -40,7 +37,8 @@ class Tab {
   }
 
   get wc() {
-    return this.view && !this.view.webContents.isDestroyed() ? this.view.webContents : null;
+    const wc = this.view && this.view.webContents;
+    return wc && !wc.isDestroyed() ? wc : null;
   }
 
   get sleeping() {
@@ -59,7 +57,6 @@ class Tab {
     return ctx.partitionFor(this.workspaceId, this.owner.isPrivate, this.owner.privateId);
   }
 
-  /** Make sure the tab has a live page, waking it up if it was asleep. */
   ensureView() {
     if (this.view) return this.view;
     this.#createView(null);
@@ -86,7 +83,7 @@ class Tab {
             contextIsolation: true,
             nodeIntegration: false,
             webviewTag: false,
-            plugins: true, // built-in PDF viewer
+            plugins: true,
             spellcheck: true,
             safeDialogs: true,
             scrollBounce: true,
@@ -101,8 +98,9 @@ class Tab {
   #syncBackground(url) {
     if (!this.view) return;
     const internal = (url || '').startsWith('lions://');
-    if (internal && this.owner.isPrivate) this.view.setBackgroundColor('#221b2e');
-    else this.view.setBackgroundColor(internal && nativeTheme.shouldUseDarkColors ? DARK_BG : '#ffffff');
+    if (internal && this.owner.isPrivate) this.view.setBackgroundColor('#170f24');
+    else if (internal) this.view.setBackgroundColor(nativeTheme.shouldUseDarkColors ? DARK_BG : '#f7f6fa');
+    else this.view.setBackgroundColor('#ffffff');
   }
 
   #wire(wc) {
@@ -123,8 +121,6 @@ class Tab {
     wc.on('did-start-navigation', (event) => {
       if (!event.isMainFrame || event.isSameDocument) return;
       this.#syncBackground(event.url);
-      // Reset here, not on commit: the new page's first blocked requests can
-      // arrive before the commit event does.
       this.blocked = 0;
     });
     wc.on('did-navigate', (_e, url) => {
@@ -151,7 +147,7 @@ class Tab {
       changed();
     });
     wc.on('did-fail-load', (_e, code, desc, failedUrl, isMainFrame) => {
-      if (!isMainFrame || code === -3) return; // -3 = aborted (new navigation, download...)
+      if (!isMainFrame || code === -3) return;
       const httpUrl = sessions.consumeFailedUpgrade(wc.id, failedUrl);
       if (httpUrl) {
         wc.loadURL(httpUrl).catch(() => {});
@@ -257,7 +253,6 @@ class Tab {
     this.owner.tabChanged(this);
   }
 
-  /** Put the tab to sleep: free its renderer but keep its history. */
   sleep() {
     const wc = this.wc;
     if (!wc || this.audible) return false;
@@ -274,7 +269,8 @@ class Tab {
     this.closing = true;
     this.owner.detachView(view);
     this.view = null;
-    if (!view.webContents.isDestroyed()) view.webContents.close({ waitForBeforeUnload: false });
+    const wc = view.webContents;
+    if (wc && !wc.isDestroyed()) wc.close({ waitForBeforeUnload: false });
     this.closing = false;
   }
 

@@ -1,9 +1,5 @@
 'use strict';
 
-// The browser chrome: toolbar, sidebar with tabs and workspaces, find bar and
-// side panel. It only renders state pushed from the main process and sends
-// commands back; it never owns any browsing state itself.
-
 const $ = (sel) => document.querySelector(sel);
 const params = new URLSearchParams(location.search);
 const isMac = window.lions.platform === 'darwin';
@@ -13,9 +9,10 @@ const LOGO = '../shared/logo.svg';
 let state = null;
 
 document.body.classList.toggle('mac', isMac);
-if (params.get('private') === '1') document.documentElement.classList.add('private');
-
-// ------------------------------------------------------------------ static bits
+if (params.get('private') === '1') {
+  document.documentElement.classList.add('private');
+  document.body.classList.add('private');
+}
 
 $('#btn-sidebar').innerHTML = icon('panel-left');
 $('#btn-back').innerHTML = icon('arrow-left');
@@ -27,6 +24,8 @@ $('#btn-downloads').innerHTML =
   icon('download') +
   '<svg class="ring" viewBox="0 0 26 26" style="display:none"><circle class="track" cx="13" cy="13" r="11"/><circle class="bar" cx="13" cy="13" r="11" stroke-dasharray="69.12" stroke-dashoffset="69.12"/></svg>';
 $('#btn-menu').innerHTML = icon('ellipsis');
+$('#hnew').innerHTML = icon('plus');
+$('#btn-alltabs').innerHTML = icon('chevron-down', 16);
 $('#btn-settings').innerHTML = icon('settings');
 $('#addr-star').innerHTML = icon('star', 16);
 $('#find-prev').innerHTML = icon('chevron-down', 16, 'flip');
@@ -37,7 +36,6 @@ $('#panel-close').innerHTML = icon('x', 16);
 $('#new-tab').innerHTML = `${icon('plus')}<span>New tab</span><kbd>${isMac ? '⌘T' : 'Ctrl+T'}</kbd>`;
 $('#private-chip').innerHTML = `${icon('eye-off', 14)}Private`;
 
-// Space for the native window buttons on Windows/Linux.
 function updateWindowControls() {
   if (isMac) return;
   const wco = navigator.windowControlsOverlay;
@@ -52,8 +50,6 @@ navigator.windowControlsOverlay?.addEventListener('geometrychange', updateWindow
 window.addEventListener('resize', updateWindowControls);
 updateWindowControls();
 
-// ------------------------------------------------------------------ helpers
-
 function el(tag, className, text) {
   const e = document.createElement(tag);
   if (className) e.className = className;
@@ -61,10 +57,17 @@ function el(tag, className, text) {
   return e;
 }
 
+function avatar(ws, size = 22) {
+  const a = el('span', 'avatar', (ws.name || '?').trim().charAt(0).toUpperCase());
+  a.style.background = ws.color;
+  a.style.width = a.style.height = `${size}px`;
+  return a;
+}
+
 function onAccent(hex) {
   const n = parseInt(hex.slice(1), 16);
   const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 150 ? '#2a1800' : '#ffffff';
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 150 ? '#15141a' : '#ffffff';
 }
 
 function formatBytes(n) {
@@ -79,8 +82,6 @@ function anchor(button, alignRight = false) {
   return [alignRight ? r.right - 240 : r.left, r.bottom + 4];
 }
 
-// ------------------------------------------------------------------ toolbar
-
 $('#btn-sidebar').onclick = () => cmd('toggleSidebar');
 $('#btn-back').onclick = () => cmd('back');
 $('#btn-forward').onclick = () => cmd('forward');
@@ -91,6 +92,19 @@ $('#btn-downloads').onclick = () => cmd('togglePanel', 'downloads');
 $('#btn-menu').onclick = (e) => cmd('mainMenu', ...anchor(e.currentTarget, true));
 $('#btn-settings').onclick = () => cmd('settings');
 $('#new-tab').onclick = () => cmd('newTab');
+$('#hnew').onclick = () => cmd('newTab');
+$('#btn-alltabs').onclick = (e) => cmd('allTabsMenu', ...anchor(e.currentTarget, true));
+$('#ws-button').onclick = (e) => cmd('workspaceSwitcher', ...anchor(e.currentTarget));
+$('#htabs').addEventListener(
+  'wheel',
+  (e) => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.currentTarget.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }
+  },
+  { passive: false },
+);
 $('#panel-close').onclick = () => state?.panel && cmd('togglePanel', state.panel);
 
 const address = $('#address');
@@ -181,8 +195,6 @@ function renderToolbar() {
   renderAddress(nav);
 }
 
-// ------------------------------------------------------------------ find bar
-
 const findInput = $('#find-input');
 let findTimer = null;
 findInput.addEventListener('input', () => {
@@ -214,8 +226,6 @@ function renderFind() {
   $('#find-count').textContent = f.query ? `${f.active}/${f.matches}` : '';
   bar.classList.toggle('nomatch', Boolean(f.query) && f.matches === 0);
 }
-
-// ------------------------------------------------------------------ tabs
 
 const tabEls = new Map();
 let dragId = null;
@@ -273,7 +283,8 @@ function createTabEl(id, kind) {
     ev.preventDefault();
     ev.stopPropagation();
     const r = e.getBoundingClientRect();
-    const after = kind === 'pin' ? ev.clientX > r.left + r.width / 2 : ev.clientY > r.top + r.height / 2;
+    const sideways = kind === 'pin' || document.body.classList.contains('h');
+    const after = sideways ? ev.clientX > r.left + r.width / 2 : ev.clientY > r.top + r.height / 2;
     clearDropMarks();
     e.classList.add(after ? 'drop-after' : 'drop-before');
   });
@@ -335,8 +346,9 @@ function placeAt(container, e, index) {
 }
 
 function renderTabs() {
-  const pinnedBox = $('#pinned');
-  const list = $('#tabs');
+  const horizontal = state.layout === 'horizontal';
+  const pinnedBox = horizontal ? $('#hpinned') : $('#pinned');
+  const list = horizontal ? $('#hlist') : $('#tabs');
   const split = state.split ? [state.split.a, state.split.b] : [];
   const seen = new Set();
   let pi = 0;
@@ -363,14 +375,15 @@ function renderTabs() {
   const active = tabEls.get(state.activeTabId);
   if (active && active.dataset.scrolledFor !== String(state.activeTabId)) {
     active.dataset.scrolledFor = String(state.activeTabId);
-    active.scrollIntoView({ block: 'nearest' });
+    active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 }
 
-// Dropping on empty space in a section moves the tab to the end of it.
 for (const [selector, pinned] of [
   ['#pinned', true],
   ['#tabs', false],
+  ['#hpinned', true],
+  ['#hlist', false],
 ]) {
   const box = $(selector);
   box.addEventListener('dragover', (ev) => {
@@ -389,12 +402,9 @@ for (const [selector, pinned] of [
     cmd('moveTab', dragId, null, pinned);
   });
 }
-// Double-click empty tab space for a new tab.
 $('#tabs').addEventListener('dblclick', (ev) => {
   if (ev.target.id === 'tabs') cmd('newTab');
 });
-
-// ------------------------------------------------------------------ workspaces
 
 let wsKey = '';
 
@@ -411,7 +421,8 @@ function renderWorkspaces() {
     return;
   }
   for (const w of s.workspaces) {
-    const b = el('button', `ws${w.id === s.activeWorkspaceId ? ' active' : ''}${w.isolated ? ' isolated' : ''}`, w.icon);
+    const b = el('button', `ws${w.id === s.activeWorkspaceId ? ' active' : ''}${w.isolated ? ' isolated' : ''}`);
+    b.append(avatar(w));
     b.title = `${w.name} · ${w.count} tab${w.count === 1 ? '' : 's'}${w.isolated ? ' · separate logins' : ''}\nRight-click for options`;
     b.onclick = () => cmd('switchWorkspace', w.id);
     b.oncontextmenu = (ev) => {
@@ -445,7 +456,74 @@ function renderWorkspaces() {
   }
 }
 
-// ------------------------------------------------------------------ side panel
+function renderWorkspaceButton() {
+  const ws = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
+  const btn = $('#ws-button');
+  if (!ws) return;
+  btn.replaceChildren(avatar(ws, 20));
+  btn.title = `Workspace: ${ws.name}${state.workspaces.length > 1 ? ` (${state.workspaces.length} workspaces)` : ''}`;
+}
+
+let bookmarksKey = '';
+
+function renderBookmarksBar() {
+  const bar = $('#bookmarks-bar');
+  const items = state.bookmarks;
+  bar.hidden = !items;
+  document.body.classList.toggle('bm', Boolean(items));
+  if (!items) return;
+  const key = JSON.stringify(items);
+  if (key === bookmarksKey) return;
+  bookmarksKey = key;
+  bar.textContent = '';
+  if (!items.length) {
+    bar.append(el('span', 'bm-empty', 'Bookmark pages with the star in the address bar and they show up here.'));
+    return;
+  }
+  for (const b of items) {
+    const item = el('button', 'bm');
+    item.title = `${b.title}\n${b.url}`;
+    const fav = el('span', 'fav');
+    fav.innerHTML = b.favicon ? `<img src="${b.favicon.replace(/"/g, '&quot;')}" alt="" referrerpolicy="no-referrer">` : icon('globe', 16);
+    const img = fav.querySelector('img');
+    if (img) img.onerror = () => (fav.innerHTML = icon('globe', 16));
+    item.append(fav, el('span', null, b.title || b.url));
+    item.addEventListener('click', (ev) => cmd('openBookmark', b.url, ev.ctrlKey || ev.metaKey || ev.shiftKey));
+    item.addEventListener('mousedown', (ev) => ev.button === 1 && ev.preventDefault());
+    item.addEventListener('auxclick', (ev) => ev.button === 1 && cmd('openBookmark', b.url, true));
+    item.addEventListener('contextmenu', (ev) => {
+      ev.preventDefault();
+      cmd('bookmarkMenu', b.id);
+    });
+    bar.append(item);
+  }
+}
+
+const FRAME_VARS = ['--bg', '--toolbar', '--surface', '--surface-2'];
+
+function luminance(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
+}
+
+function applyColors(s) {
+  const root = document.documentElement;
+  if (s.frameColor) {
+    const darkFrame = luminance(s.frameColor) <= 150;
+    root.classList.toggle('dark', darkFrame);
+    root.style.setProperty('--bg', s.frameColor);
+    root.style.setProperty('--toolbar', s.frameColor);
+    root.style.setProperty('--surface', `color-mix(in srgb, ${s.frameColor} ${darkFrame ? 84 : 30}%, white)`);
+    root.style.setProperty('--surface-2', `color-mix(in srgb, ${s.frameColor} ${darkFrame ? 70 : 92}%, black)`);
+  } else {
+    root.classList.toggle('dark', s.dark);
+    for (const v of FRAME_VARS) root.style.removeProperty(v);
+  }
+  if (!s.isPrivate) {
+    root.style.setProperty('--accent-base', s.accent);
+    root.style.setProperty('--on-accent-base', onAccent(s.accent));
+  }
+}
 
 const notes = $('#notes');
 let notesFor = null;
@@ -540,7 +618,7 @@ function renderPanel() {
   $('#panel-downloads').hidden = p !== 'downloads';
   if (p === 'notes') {
     const ws = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
-    $('#panel-title').textContent = ws ? `Notes · ${ws.icon} ${ws.name}` : 'Notes';
+    $('#panel-title').textContent = ws ? `Notes · ${ws.name}` : 'Notes';
     if (notesFor !== state.activeWorkspaceId) loadNotes();
   } else {
     flushNotes();
@@ -552,14 +630,12 @@ function renderPanel() {
   }
 }
 
-// ------------------------------------------------------------------ split view frames
-
 let dragRatio = null;
 
 function renderPanes() {
   const box = $('#panes');
   const s = state;
-  if (dragRatio) return; // don't rebuild the handle mid-drag
+  if (dragRatio) return;
   box.textContent = '';
   if (!s.split || s.htmlFullscreen || s.panes.length !== 2) return;
   const [a, b] = s.panes;
@@ -602,15 +678,11 @@ function renderPanes() {
   box.append(handle);
 }
 
-// ------------------------------------------------------------------ main render
-
 function render() {
   const s = state;
-  if (!s.isPrivate) {
-    document.documentElement.style.setProperty('--accent', s.accent);
-    document.documentElement.style.setProperty('--on-accent', onAccent(s.accent));
-  }
-  document.documentElement.classList.toggle('dark', s.dark);
+  applyColors(s);
+  document.body.classList.toggle('h', s.layout === 'horizontal');
+  document.body.classList.toggle('v', s.layout !== 'horizontal');
   document.body.classList.toggle('collapsed', s.sidebarCollapsed);
   document.body.classList.toggle('html-fullscreen', s.htmlFullscreen);
   document.body.classList.toggle('fullscreen', s.windowFullscreen);
@@ -618,6 +690,8 @@ function render() {
   renderFind();
   renderTabs();
   renderWorkspaces();
+  renderWorkspaceButton();
+  renderBookmarksBar();
   renderPanel();
   renderPanes();
 }

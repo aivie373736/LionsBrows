@@ -16,14 +16,19 @@
         max-width: 560px;
         padding: 40px 28px;
       }
-      .err img {
-        width: 84px;
-        height: 84px;
+      .err-icon {
+        width: 48px;
+        height: 48px;
+        color: var(--text-3);
+      }
+      .err-icon svg {
+        width: 48px;
+        height: 48px;
       }
       h1 {
-        font-size: 26px;
-        margin: 22px 0 10px;
-        letter-spacing: -0.01em;
+        font-size: 24px;
+        font-weight: 600;
+        margin: 20px 0 10px;
       }
       p {
         color: var(--text-2);
@@ -51,16 +56,17 @@
   </head>
   <body>
     <main class="err">
-      <img src="lions://assets/logo.svg" alt="" />
+      <div class="err-icon" id="icon"></div>
       <h1 id="title"></h1>
       <p id="desc"></p>
       <p class="url" id="url"></p>
       <div class="actions">
-        <button class="button primary" id="retry">Try again</button>
+        <button class="button primary" id="retry">Reload</button>
         <button class="button" id="back">Go back</button>
       </div>
       <div class="code" id="code"></div>
     </main>
+    <script src="lions://assets/icons.js"></script>
     <script src="error.js"></script>
   </body>
 </html>

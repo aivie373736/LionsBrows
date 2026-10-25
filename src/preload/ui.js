@@ -1,7 +1,5 @@
 'use strict';
 
-// Preload for LionsBrows' own UI (sidebar/toolbar) and the command bar.
-
 const { contextBridge, ipcRenderer } = require('electron');
 
 const CHANNELS = new Set(['ui:state', 'ui:focus-find', 'overlay:open']);

@@ -1,15 +1,11 @@
 'use strict';
 
-// Experimental: load unpacked Chrome extensions (folders containing a
-// manifest.json). Electron supports only part of the extension APIs, so
-// simple content-script extensions work best.
-
 const fs = require('node:fs');
 const path = require('node:path');
 const { ctx } = require('./context');
 
 function api(ses) {
-  return ses.extensions || ses; // `session.extensions` in newer Electron
+  return ses.extensions || ses;
 }
 
 async function loadInto(ses) {
@@ -38,7 +34,7 @@ function list() {
 }
 
 function add(dir, sessions) {
-  readManifest(dir); // throws if this isn't an extension folder
+  readManifest(dir);
   ctx.config.update((d) => {
     if (!d.extensions.includes(dir)) d.extensions.push(dir);
   });

@@ -1,10 +1,5 @@
 'use strict';
 
-// Ad & tracker blocking with Ghostery's filter engine (EasyList, EasyPrivacy
-// and friends). We wire the engine up ourselves instead of using
-// `enableBlockingInSession` so that it works across several sessions
-// (workspaces, private windows) and respects the per-site allowlist.
-
 const fs = require('node:fs');
 const path = require('node:path');
 const { app, ipcMain, net, webContents } = require('electron');
@@ -12,7 +7,7 @@ const { ElectronBlocker, Request } = require('@ghostery/adblocker-electron');
 const { ctx } = require('./context');
 
 const PRELOAD_PATH = require.resolve('@ghostery/adblocker-electron-preload');
-const REFRESH_AFTER = 3 * 86_400_000; // refresh filter lists every 3 days
+const REFRESH_AFTER = 3 * 86_400_000;
 
 let blocker = null;
 let cacheFile = null;
@@ -46,7 +41,7 @@ async function refresh() {
     await fs.promises.writeFile(cacheFile, fresh.serialize());
   } catch (err) {
     console.warn('[adblock] could not download filter lists:', err.message);
-    if (!blocker) setTimeout(refresh, 10 * 60_000); // try again later
+    if (!blocker) setTimeout(refresh, 10 * 60_000);
   }
 }
 
@@ -84,7 +79,6 @@ function topUrlOf(webContentsId) {
   return wc && !wc.isDestroyed() ? wc.getURL() : '';
 }
 
-/** Called from the session's onBeforeRequest for every non-main-frame request. */
 function onBeforeRequest(details, callback) {
   if (!blocker || details.resourceType === 'mainFrame') return callback({});
   const topUrl = topUrlOf(details.webContentsId);

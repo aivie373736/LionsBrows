@@ -1,8 +1,5 @@
 'use strict';
 
-// IPC between the main process and the browser UI / command bar.
-// Only whitelisted commands are callable, and only from our own views.
-
 const { ipcMain } = require('electron');
 const { ctx } = require('./context');
 const menus = require('./menus');
@@ -13,8 +10,6 @@ const { run, openInternal } = require('./actions');
 
 const privateNotes = new Map();
 
-// Notes belong to a workspace; the UI says which one so that a save still in
-// flight while switching workspaces lands in the right notepad.
 function notesKey(w, wsId) {
   return wsId && ctx.workspaces().some((x) => x.id === wsId) ? wsId : w.activeWorkspaceId;
 }
@@ -38,6 +33,10 @@ const UI = {
   tabMenu: (w, id) => menus.tabMenu(w, id),
   shieldMenu: (w, x, y) => menus.shieldMenu(w, x, y),
   workspaceMenu: (w, id, x, y) => menus.workspaceMenu(w, id, x, y),
+  workspaceSwitcher: (w, x, y) => menus.workspaceSwitcher(w, x, y),
+  allTabsMenu: (w, x, y) => menus.allTabsMenu(w, x, y),
+  bookmarkMenu: (w, id) => menus.bookmarkMenu(w, id),
+  openBookmark: (w, url, newTab) => /^https?:/i.test(String(url)) && w.openUrl(String(url), { newTab: Boolean(newTab), background: Boolean(newTab) }),
   toggleBookmark: (w) => run('bookmark', w),
   toggleMute: (w, id) => {
     const t = w.tabById(id);

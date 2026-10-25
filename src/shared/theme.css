@@ -1,60 +1,65 @@
-/* LionsBrows design tokens, shared by the browser UI and the lions:// pages. */
-
 :root {
   color-scheme: light;
-  --accent: #f0a020;
-  --on-accent: #2a1800;
-  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
-  --bg: #f3efe8;
-  --bg-hover: #e9e3d9;
-  --bg-active: #e1d9cc;
-  --surface: #fffdf9;
-  --surface-2: #f8f4ee;
-  --border: rgba(70, 50, 25, 0.13);
-  --border-strong: rgba(70, 50, 25, 0.22);
-  --text: #2b2620;
-  --text-2: #6c6257;
-  --text-3: #9b9084;
-  --danger: #d64545;
-  --ok: #2f9e6a;
-  --shadow: 0 12px 40px rgba(50, 32, 10, 0.2), 0 2px 8px rgba(50, 32, 10, 0.08);
-  --radius: 10px;
-  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
+  --accent-base: #7542e5;
+  --accent: var(--accent-base);
+  --on-accent: var(--on-accent-base, #ffffff);
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --bg: #efeef3;
+  --toolbar: #efeef3;
+  --page: #f7f6fa;
+  --surface: #ffffff;
+  --surface-2: #f0eff4;
+  --bg-hover: rgba(21, 20, 26, 0.06);
+  --bg-active: rgba(21, 20, 26, 0.11);
+  --border: rgba(21, 20, 26, 0.12);
+  --border-strong: rgba(21, 20, 26, 0.24);
+  --text: #15141a;
+  --text-2: #55535f;
+  --text-3: #8b8995;
+  --danger: #d7264c;
+  --ok: #1d8a4e;
+  --warn: #e9a700;
+  --shadow: 0 10px 30px rgba(21, 20, 26, 0.16), 0 1px 3px rgba(21, 20, 26, 0.08);
+  --radius: 12px;
+  --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: 'Cascadia Mono', Consolas, ui-monospace, 'SF Mono', monospace;
 }
 
-/* Dark mode is a class (set from the app's theme setting) rather than a media
-   query, so it behaves the same on every OS. */
 :root.dark {
   color-scheme: dark;
-  --bg: #1b1916;
-  --bg-hover: #2a2622;
-  --bg-active: #34302b;
-  --surface: #24211d;
-  --surface-2: #2c2824;
-  --border: rgba(255, 240, 220, 0.09);
-  --border-strong: rgba(255, 240, 220, 0.17);
-  --text: #efe9e1;
-  --text-2: #b4aa9e;
-  --text-3: #81776c;
-  --shadow: 0 16px 50px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --accent: color-mix(in srgb, var(--accent-base) 50%, white);
+  --on-accent: #15141a;
+  --bg: #1c1b21;
+  --toolbar: #1c1b21;
+  --page: #141317;
+  --surface: #232228;
+  --surface-2: #1c1b21;
+  --bg-hover: rgba(251, 251, 254, 0.07);
+  --bg-active: rgba(251, 251, 254, 0.12);
+  --border: rgba(251, 251, 254, 0.12);
+  --border-strong: rgba(251, 251, 254, 0.24);
+  --text: #fbfbfe;
+  --text-2: #c8c7d0;
+  --text-3: #8f8e99;
+  --shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-/* Private windows: a calm purple, whatever the system theme. */
 :root.private {
   color-scheme: dark;
-  --accent: #b18cff;
-  --on-accent: #1d1033;
-  --bg: #221b2e;
-  --bg-hover: #2f2640;
-  --bg-active: #3a2f4f;
-  --surface: #2a2238;
-  --surface-2: #322943;
-  --border: rgba(230, 215, 255, 0.1);
-  --border-strong: rgba(230, 215, 255, 0.2);
-  --text: #ece6f7;
-  --text-2: #b9add0;
-  --text-3: #8a7fa0;
+  --accent: #c3b1ff;
+  --on-accent: #15141a;
+  --bg: #1f1630;
+  --toolbar: #1f1630;
+  --page: #170f24;
+  --surface: #2a2040;
+  --surface-2: #1f1630;
+  --bg-hover: rgba(255, 255, 255, 0.07);
+  --bg-active: rgba(255, 255, 255, 0.12);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.24);
+  --text: #f6f2ff;
+  --text-2: #c9bfe0;
+  --text-3: #958aad;
 }
 
 * {
@@ -89,10 +94,10 @@ kbd {
   font-family: var(--font);
   font-size: 11px;
   padding: 1px 6px;
-  border-radius: 5px;
+  border-radius: 4px;
   border: 1px solid var(--border-strong);
   color: var(--text-2);
-  background: var(--surface-2);
+  background: var(--surface);
 }
 
 @media (prefers-reduced-motion: reduce) {

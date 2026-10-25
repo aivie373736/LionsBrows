@@ -1,8 +1,5 @@
 'use strict';
 
-// The command bar. Results come from the main process (palette.js); this file
-// only handles typing, keyboard navigation and rendering.
-
 const $ = (sel) => document.querySelector(sel);
 const call = (name, ...args) => window.lions.overlay(name, ...args);
 const isMac = window.lions.platform === 'darwin';
@@ -45,7 +42,6 @@ function el(tag, className, text) {
 }
 
 function allItems() {
-  // Suggestions go right after the first search row.
   const i = items.findIndex((x) => x.type === 'search');
   if (!suggestions.length) return items;
   const at = i === -1 ? items.length : i + 1;
@@ -107,7 +103,7 @@ async function refresh() {
     return;
   }
   const found = await call('query', text, mode);
-  if (mySeq !== seq) return; // a newer query already answered
+  if (mySeq !== seq) return;
   items = found || [];
   suggestions = [];
   selected = 0;
@@ -121,7 +117,6 @@ async function refresh() {
     suggestions = (s || []).filter((x) => !known.has(x.title.toLowerCase()));
     const current = allItems()[selected];
     render();
-    // Keep the selection on the same item after suggestions arrive.
     const idx = allItems().indexOf(current);
     if (idx >= 0 && idx !== selected) {
       selected = idx;
@@ -183,7 +178,7 @@ function setHints() {
 window.lions.on('overlay:open', (opts) => {
   mode = opts.mode || 'command';
   prompt = mode === 'prompt' ? opts : null;
-  if (!opts.isPrivate && opts.accent) document.documentElement.style.setProperty('--accent', opts.accent);
+  if (!opts.isPrivate && opts.accent) document.documentElement.style.setProperty('--accent-base', opts.accent);
   document.documentElement.classList.toggle('private', Boolean(opts.isPrivate));
   document.documentElement.classList.toggle('dark', Boolean(opts.dark));
   $('#prompt-title').hidden = mode !== 'prompt';
@@ -193,7 +188,6 @@ window.lions.on('overlay:open', (opts) => {
     mode === 'prompt' ? 'Type a name' : mode === 'address' ? 'Search or enter address' : 'Search tabs, history and the web — or type > for commands';
   input.value = mode === 'prompt' ? opts.value || '' : opts.text || '';
   setHints();
-  // Restart the open animation.
   const p = $('#palette');
   p.style.animation = 'none';
   void p.offsetWidth;

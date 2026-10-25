@@ -4,7 +4,7 @@ let query = '';
 const list = document.getElementById('list');
 
 function emptyState(text) {
-  return el('div', { class: 'empty-state' }, el('img', { class: 'logo', src: 'lions://assets/logo.svg', alt: '' }), el('div', {}, text));
+  return el('div', { class: 'empty-state' }, el('div', { class: 'empty-icon', html: icon('bookmark', 40) }), el('div', {}, text));
 }
 
 function editable(span, onSave) {
@@ -49,7 +49,6 @@ function row(b) {
 }
 
 function moveToFolder(b) {
-  // A tiny inline form instead of window.prompt (which Electron doesn't support).
   const form = el('form', { class: 'row', style: 'gap:8px' });
   const input = el('input', { type: 'text', placeholder: 'Folder name (empty = no folder)', value: b.folder || '', style: 'flex:1' });
   form.append(input, el('button', { class: 'button primary', type: 'submit' }, 'Move'), el('button', { class: 'button', type: 'button', onclick: () => render() }, 'Cancel'));

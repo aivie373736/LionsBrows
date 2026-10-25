@@ -3,22 +3,26 @@
 const SECTIONS = [
   ['general', 'General', 'house'],
   ['appearance', 'Appearance', 'palette'],
+  ['newtab', 'New tab page', 'image'],
   ['search', 'Search', 'search'],
-  ['tabs', 'Tabs & memory', 'layers'],
-  ['privacy', 'Privacy & security', 'shield'],
+  ['tabs', 'Tabs and memory', 'layers'],
+  ['privacy', 'Privacy and security', 'lock'],
   ['downloads', 'Downloads', 'download'],
   ['extensions', 'Extensions', 'puzzle'],
   ['shortcuts', 'Keyboard shortcuts', 'keyboard'],
   ['about', 'About LionsBrows', 'info'],
 ];
+const SECONDARY_FROM = 'extensions';
 
-let S = null; // settings + metadata from the main process
+let S = null;
+
+function errorText(err) {
+  return String(err.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+}
 
 async function set(key, value) {
   S.settings = await api.call('setSetting', key, value);
 }
-
-// ------------------------------------------------------------------ controls
 
 function row(label, sub, control) {
   return el('div', { class: 'row' }, el('div', { class: 'label' }, el('div', {}, label), sub ? el('div', { class: 'sub' }, sub) : null), control);
@@ -54,83 +58,266 @@ function segmented(key, options) {
   return box;
 }
 
-function section(id, title, sub, ...cards) {
-  return [el('h2', { class: 'section-title', id }, title), sub ? el('p', { class: 'section-sub' }, sub) : null, ...cards];
-}
-
 function card(...rows) {
   return el('div', { class: 'card' }, ...rows);
 }
 
-// ------------------------------------------------------------------ sections
+function titleWithIcon(tag, className, text, iconName, size) {
+  const h = el(tag, { class: className, html: iconName ? icon(iconName, size) : '' });
+  h.append(text);
+  return h;
+}
+
+function panel(title, iconName, ...items) {
+  return el('div', { class: 'panel' }, title ? titleWithIcon('h3', 'panel-title', title, iconName, 22) : null, ...items);
+}
+
+function section(id, sub, ...items) {
+  const [, title, iconName] = SECTIONS.find(([key]) => key === id);
+  const box = el('section', { class: 'settings-section', id }, titleWithIcon('h2', 'section-title', title, iconName, 26), sub ? el('p', { class: 'section-sub' }, sub) : null);
+  let loose = null;
+  for (const item of items.filter(Boolean)) {
+    if (item.classList.contains('panel')) {
+      loose = null;
+      box.append(item);
+    } else {
+      if (!loose) {
+        loose = panel(null, null);
+        box.append(loose);
+      }
+      loose.append(item);
+    }
+  }
+  return box;
+}
 
 async function general() {
   const about = await api.call('about');
-  const defaultBtn = el('button', { class: 'button' }, about.isDefault ? 'LionsBrows is your default ✓' : 'Make default');
+  const defaultBtn = el('button', { class: 'button' }, about.isDefault ? 'LionsBrows is your default browser' : 'Make default');
   defaultBtn.disabled = about.isDefault;
   defaultBtn.onclick = async () => {
     const result = await api.call('makeDefaultBrowser');
     if (result === 'settings') toast('Choose LionsBrows under “Web browser” in Windows Settings');
     else if (result === 'ok') {
-      defaultBtn.textContent = 'LionsBrows is your default ✓';
+      defaultBtn.textContent = 'LionsBrows is your default browser';
       defaultBtn.disabled = true;
     } else toast('Your system did not allow the change');
   };
-  const name = el('input', { type: 'text', placeholder: 'Your name', maxlength: '40' });
-  name.value = S.settings.greetingName;
-  name.addEventListener('input', debounce(() => set('greetingName', name.value.trim()), 400));
   return section(
     'general',
-    'General',
     null,
-    card(
-      row('On startup', null, select('startup', [['restore', 'Continue where you left off'], ['newtab', 'Open a new tab (keep pinned tabs)']])),
-      row('Default browser', 'Open links from other apps in LionsBrows.', defaultBtn),
-      row('Your name', 'Used for the greeting on the new tab page.', name),
+    panel(
+      'Startup',
+      'rotate-cw',
+      card(row('When LionsBrows starts', null, select('startup', [['restore', 'Continue where you left off'], ['newtab', 'Open a new tab']]))),
+    ),
+    panel('Default browser', 'globe', card(row('Open links from other apps in LionsBrows', null, defaultBtn))),
+  );
+}
+
+function colorPicker(value, onPick) {
+  const input = el('input', { type: 'color', value, class: 'color-input' });
+  input.addEventListener('change', () => onPick(input.value));
+  return input;
+}
+
+function swatchRow(current, onPick) {
+  const box = el('div', { class: 'swatches' });
+  const mark = (target) => box.querySelectorAll('.swatch').forEach((x) => x.classList.toggle('on', x === target));
+  for (const [name, color] of Object.entries(S.accents)) {
+    const b = el('button', { class: `swatch${current.toLowerCase() === color ? ' on' : ''}`, title: name[0].toUpperCase() + name.slice(1), 'aria-label': name, style: `background:${color}` });
+    b.onclick = async () => {
+      await onPick(color);
+      mark(b);
+    };
+    box.append(b);
+  }
+  const custom = el('label', { class: `swatch custom${Object.values(S.accents).includes(current.toLowerCase()) ? '' : ' on'}`, title: 'Custom color', html: icon('plus', 14) });
+  const input = el('input', { type: 'color', value: current });
+  input.addEventListener('input', () => applyAccent(input.value));
+  input.addEventListener('change', async () => {
+    await onPick(input.value);
+    mark(custom);
+  });
+  custom.append(input);
+  box.append(custom);
+  return box;
+}
+
+function appearance() {
+  const frameAuto = el('input', { type: 'checkbox' });
+  frameAuto.checked = !S.settings.frameColor;
+  const framePicker = colorPicker(S.settings.frameColor || '#efeef3', (c) => set('frameColor', c).then(() => (frameAuto.checked = false)));
+  framePicker.disabled = frameAuto.checked;
+  frameAuto.addEventListener('change', async () => {
+    framePicker.disabled = frameAuto.checked;
+    await set('frameColor', frameAuto.checked ? '' : framePicker.value);
+  });
+  const frameControl = el('div', { class: 'inline' }, el('label', { class: 'check' }, frameAuto, 'Automatic'), framePicker);
+
+  return section(
+    'appearance',
+    null,
+    panel(
+      'Theme',
+      'sun',
+      card(
+        row('Mode', 'Websites that support dark mode follow this setting.', segmented('theme', [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']])),
+        row(
+          'Accent color',
+          'Used for buttons, selections and focus rings.',
+          swatchRow(S.settings.accent, async (c) => {
+            await set('accent', c);
+            applyAccent(c);
+          }),
+        ),
+        row('Toolbar color', 'Text and icons adjust automatically.', frameControl),
+      ),
+    ),
+    panel(
+      'Layout',
+      'columns-2',
+      card(
+        row('Tabs', null, segmented('layout', [['horizontal', 'On top'], ['vertical', 'On the side']])),
+        row('Bookmarks toolbar', 'Show bookmarks below the address bar.', toggle('showBookmarksBar')),
+        row('Compact sidebar', 'Only show icons when tabs are on the side.', toggle('sidebarCollapsed')),
+      ),
     ),
   );
 }
 
-function appearance() {
-  const swatches = el('div', { class: 'swatches' });
-  for (const [id, color] of Object.entries(S.accents)) {
-    const b = el('button', { class: `swatch${S.settings.accent === id ? ' on' : ''}`, title: id[0].toUpperCase() + id.slice(1), style: `background:${color}` });
+function newtabSection() {
+  const bg = S.background;
+  const preview = el('div', { class: 'bg-preview' });
+  const paintPreview = (info) => {
+    preview.textContent = '';
+    preview.style.background = info.type === 'color' ? info.color : '';
+    if (info.type === 'image') preview.style.background = `center / cover url("${info.url}")`;
+    if (info.type === 'video') preview.append(el('video', { src: info.url, muted: true, autoplay: true, loop: true, playsinline: true }));
+    if (info.type === 'default') preview.append(el('span', {}, 'None'));
+  };
+  paintPreview(bg);
+
+  const typeSeg = el('div', { class: 'seg' });
+  const sliders = el('div');
+  const reload = async () => {
+    S = await api.call('getSettings');
+    paintPreview(S.background);
+    typeSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.value === S.background.type));
+    sliders.hidden = !(S.background.type === 'image' || S.background.type === 'video');
+  };
+  const pick = (kind) => async () => {
+    try {
+      await api.call('chooseBackground', kind);
+    } catch (err) {
+      toast(errorText(err));
+    }
+    reload();
+  };
+
+  for (const [value, label] of [['default', 'None'], ['color', 'Color'], ['image', 'Image…'], ['video', 'Video…']]) {
+    const b = el('button', { class: bg.type === value ? 'on' : '', 'data-value': value }, label);
     b.onclick = async () => {
-      await set('accent', id);
-      applyAccent(color);
-      swatches.querySelectorAll('.swatch').forEach((x) => x.classList.toggle('on', x === b));
+      if (value === 'image' || value === 'video') return pick(value)();
+      await api.call('setSettings', { ntBackground: value });
+      reload();
     };
-    swatches.append(b);
+    typeSeg.append(b);
   }
+  const color = colorPicker(S.settings.ntBackgroundColor, async (c) => {
+    await api.call('setSettings', { ntBackground: 'color', ntBackgroundColor: c });
+    reload();
+  });
+
+  const rangeRow = (label, key, min, max, step, fmt) => {
+    const input = el('input', { type: 'range', min, max, step, value: S.settings[key] });
+    const out = el('output', {}, fmt(S.settings[key]));
+    input.addEventListener('input', () => (out.textContent = fmt(Number(input.value))));
+    input.addEventListener('change', () => set(key, Number(input.value)));
+    return row(label, null, el('div', { class: 'inline' }, input, out));
+  };
+  sliders.append(
+    rangeRow('Dim', 'ntBackgroundDim', 0, 0.9, 0.05, (v) => `${Math.round(v * 100)}%`),
+    rangeRow('Blur', 'ntBackgroundBlur', 0, 40, 1, (v) => `${v}px`),
+  );
+  sliders.hidden = !(bg.type === 'image' || bg.type === 'video');
+
+  const name = el('input', { type: 'text', placeholder: 'Your name', maxlength: '40' });
+  name.value = S.settings.greetingName;
+  name.addEventListener('input', debounce(() => set('greetingName', name.value.trim()), 400));
+
   return section(
-    'appearance',
-    'Appearance',
+    'newtab',
     null,
-    card(
-      row('Theme', 'Websites that support dark mode follow this too.', segmented('theme', [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']])),
-      row('Accent color', null, swatches),
-      row('Compact sidebar', 'Show only icons in the sidebar (Ctrl+B).', toggle('sidebarCollapsed')),
+    panel(
+      'Background',
+      'image',
+      card(
+        row('Current background', 'Use a video, an image or a solid color. Videos play muted and loop.', preview),
+        row('Type', null, typeSeg),
+        row('Color', null, color),
+        sliders,
+      ),
+    ),
+    panel(
+      'Content',
+      'list',
+      card(
+        row('Shortcuts', 'Your most visited sites.', toggle('showTopSites')),
+        row('Greeting', null, toggle('showGreeting')),
+        row('Name', 'Shown in the greeting.', name),
+        row('Blocked trackers count', null, toggle('showBlockedStats')),
+      ),
     ),
   );
 }
 
 async function search() {
   const bangs = await api.call('bangs');
+  const engineSelect = select('searchEngine', S.engines.map((e) => [e.id, e.name]));
+  const customName = el('input', { type: 'text', placeholder: 'Name', maxlength: '40' });
+  const customUrl = el('input', { type: 'text', placeholder: 'https://example.com/search?q=%s', class: 'wide' });
+  customName.value = S.settings.customSearchName;
+  customUrl.value = S.settings.customSearchUrl;
+  const save = el('button', { class: 'button primary' }, 'Save');
+  save.onclick = async () => {
+    try {
+      S.settings = await api.call('setSettings', { customSearchName: customName.value.trim(), customSearchUrl: customUrl.value.trim() });
+      S = await api.call('getSettings');
+      engineSelect.replaceChildren(...S.engines.map((e) => el('option', { value: e.id }, e.name)));
+      engineSelect.value = S.settings.searchEngine;
+      if (S.engines.some((e) => e.id === 'custom')) {
+        S.settings = await api.call('setSetting', 'searchEngine', 'custom');
+        engineSelect.value = 'custom';
+        toast(`${customName.value.trim() || 'Custom search'} is now your search engine`);
+      } else toast('Custom search engine removed');
+    } catch (err) {
+      toast(errorText(err));
+    }
+  };
   return section(
     'search',
-    'Search',
     null,
-    card(
-      row('Search engine', 'Used in the command bar and on the new tab page.', select('searchEngine', S.engines.map((e) => [e.id, e.name]))),
-      row('Search suggestions', 'Ask your search engine for suggestions while you type (never in private windows).', toggle('searchSuggestions')),
+    panel(
+      'Search engine',
+      'search',
+      card(
+        row('Default search engine', 'Used in the address bar and on the new tab page.', engineSelect),
+        row('Search suggestions', 'Not used in private windows.', toggle('searchSuggestions')),
+      ),
     ),
-    card(
-      row('Bangs', 'Start or end a search with a bang to search a site directly, like “!yt lofi” or “weather !g”.', null),
-      el('div', { class: 'bangs' }, ...bangs.map((b) => el('div', {}, el('code', {}, `!${b.key}`), b.name))),
+    panel(
+      'Custom search engine',
+      'plus',
+      card(row('Add a search engine', 'Use %s where the search terms go. Leave the address empty to remove it.', null), el('div', { class: 'row form-row' }, customName, customUrl, save)),
     ),
-    card(
-      row('Show most visited sites', 'On the new tab page.', toggle('showTopSites')),
-      row('Show blocked ads counter', 'On the new tab page.', toggle('showBlockedStats')),
+    panel(
+      'Bangs',
+      'zap',
+      card(
+        row('Search a site directly', 'Start or end a search with a shortcut, for example “!yt music” or “weather !g”.', null),
+        el('div', { class: 'bangs' }, ...bangs.map((b) => el('div', {}, el('code', {}, `!${b.key}`), b.name))),
+      ),
     ),
   );
 }
@@ -138,61 +325,58 @@ async function search() {
 function tabs() {
   return section(
     'tabs',
-    'Tabs & memory',
     null,
-    card(
-      row(
-        'Put background tabs to sleep',
-        'Sleeping tabs free their memory and wake up instantly when you click them. Tabs playing audio never sleep.',
-        select(
-          'tabSleepMinutes',
-          [
-            [0, 'Never'],
-            [5, 'After 5 minutes'],
-            [15, 'After 15 minutes'],
-            [30, 'After 30 minutes'],
-            [60, 'After 1 hour'],
-            [180, 'After 3 hours'],
-          ],
-          Number,
+    panel(
+      'Memory saver',
+      'zap',
+      card(
+        row(
+          'Put inactive tabs to sleep',
+          'Sleeping tabs free up memory and reload when you open them. Tabs playing audio stay active.',
+          select(
+            'tabSleepMinutes',
+            [
+              [0, 'Never'],
+              [5, 'After 5 minutes'],
+              [15, 'After 15 minutes'],
+              [30, 'After 30 minutes'],
+              [60, 'After 1 hour'],
+              [180, 'After 3 hours'],
+            ],
+            Number,
+          ),
         ),
       ),
     ),
   );
 }
 
+function listRow(label, buttonTitle, onRemove, ...extra) {
+  return el('div', { class: 'list-item' }, el('span', { class: 'host' }, label), ...extra, el('button', { class: 'icon-btn', title: buttonTitle, 'aria-label': buttonTitle, html: icon('x', 16), onclick: onRemove }));
+}
+
 async function privacy() {
   const info = await api.call('adblockInfo');
   const since = new Date(info.since).toLocaleDateString();
 
-  const refresh = el('button', { class: 'button' }, 'Update filter lists');
+  const refresh = el('button', { class: 'button' }, 'Update lists');
   refresh.onclick = async () => {
     refresh.disabled = true;
     refresh.textContent = 'Updating…';
     await api.call('adblockRefresh');
-    refresh.textContent = 'Up to date ✓';
+    refresh.textContent = 'Up to date';
   };
 
   const allowList = el('div', { class: 'mini-list' });
   const renderAllow = (list) => {
     allowList.textContent = '';
-    if (!list.length) allowList.append(el('div', { class: 'row' }, el('div', { class: 'label sub' }, 'No exceptions. Ads are blocked everywhere.')));
+    if (!list.length) allowList.append(row('No exceptions', 'Turn blocking off for a site with the shield icon in the address bar.', null));
     for (const host of list) {
       allowList.append(
-        el(
-          'div',
-          { class: 'list-item' },
-          el('span', { class: 'host' }, host),
-          el('button', {
-            class: 'icon-btn',
-            title: 'Block ads here again',
-            html: icon('x', 15),
-            onclick: async () => {
-              await api.call('adblockAllowRemove', host);
-              renderAllow((await api.call('adblockInfo')).allowlist);
-            },
-          }),
-        ),
+        listRow(host, 'Remove exception', async () => {
+          await api.call('adblockAllowRemove', host);
+          renderAllow((await api.call('adblockInfo')).allowlist);
+        }),
       );
     }
   };
@@ -203,24 +387,18 @@ async function privacy() {
     const all = await api.call('permissionsList');
     perms.textContent = '';
     const origins = Object.keys(all);
-    if (!origins.length) perms.append(el('div', { class: 'row' }, el('div', { class: 'label sub' }, 'Sites will ask before using your camera, microphone, location or notifications.')));
+    if (!origins.length) perms.append(row('No saved permissions', 'Sites ask before using your camera, microphone, location or notifications.', null));
     for (const origin of origins) {
-      const tags = Object.entries(all[origin]).map(([perm, v]) => el('span', { class: `pill-tag ${v}` }, `${perm.replace('media:', '').replace('+', ' & ')}: ${v}`));
+      const tags = Object.entries(all[origin]).map(([perm, v]) => el('span', { class: `pill-tag ${v}` }, `${perm.replace('media:', '').replace('+', ' & ')}: ${v === 'allow' ? 'allowed' : 'blocked'}`));
       perms.append(
-        el(
-          'div',
-          { class: 'list-item' },
-          el('span', { class: 'host' }, origin.replace(/^https?:\/\//, '')),
+        listRow(
+          origin.replace(/^https?:\/\//, ''),
+          'Reset permissions',
+          async () => {
+            await api.call('permissionsReset', origin);
+            renderPerms();
+          },
           ...tags,
-          el('button', {
-            class: 'icon-btn',
-            title: 'Reset',
-            html: icon('x', 15),
-            onclick: async () => {
-              await api.call('permissionsReset', origin);
-              renderPerms();
-            },
-          }),
         ),
       );
     }
@@ -235,90 +413,83 @@ async function privacy() {
   };
   const range = el('select', {}, el('option', { value: 'hour' }, 'Last hour'), el('option', { value: 'day' }, 'Last 24 hours'), el('option', { value: 'week' }, 'Last 7 days'), el('option', { value: 'month' }, 'Last 4 weeks'), el('option', { value: 'all' }, 'All time'));
   range.value = 'day';
-  const clearBtn = el('button', { class: 'button danger', html: `${icon('trash-2', 15)}Clear data` });
+  const clearBtn = el('button', { class: 'button danger' }, 'Clear data');
   clearBtn.onclick = async () => {
     const opts = Object.fromEntries(Object.entries(checks).map(([k, c]) => [k, c.checked]));
-    if (!Object.values(opts).some(Boolean)) return toast('Pick something to clear first');
+    if (!Object.values(opts).some(Boolean)) return toast('Select at least one item');
     clearBtn.disabled = true;
     await api.call('clearData', { ...opts, range: range.value });
     clearBtn.disabled = false;
-    toast('Done. Your browsing data is cleared.');
+    toast('Browsing data cleared');
   };
 
   return section(
     'privacy',
-    'Privacy & security',
     null,
-    card(
-      row('Block ads & trackers', `${info.blocked.toLocaleString()} blocked since ${since}. Uses EasyList, EasyPrivacy and more.`, toggle('adblock')),
-      row('Filter lists', 'Lists update automatically every few days.', refresh),
-    ),
-    el('p', { class: 'section-sub', style: 'margin-top:16px' }, 'Sites where ads are allowed (turn it off per site with the shield in the address bar):'),
-    card(allowList),
-    card(
-      row('Always use secure connections', 'Upgrade websites to HTTPS automatically, falling back to HTTP only if a site doesn’t support it.', toggle('httpsUpgrade')),
-      row('Global Privacy Control', 'Tell websites not to sell or share your personal data.', toggle('gpc')),
-    ),
-    el('p', { class: 'section-sub', style: 'margin-top:16px' }, 'Site permissions:'),
-    card(perms),
-    el('h3', { class: 'section-title', style: 'font-size:14px;margin-top:22px' }, 'Clear browsing data'),
-    card(
-      el(
-        'div',
-        { class: 'checks' },
-        el('label', {}, checks.history, 'Browsing history'),
-        el('label', {}, checks.cookies, 'Cookies and site data (signs you out)'),
-        el('label', {}, checks.cache, 'Cached images and files'),
-        el('label', {}, checks.downloads, 'Download list'),
+    panel(
+      'Tracking protection',
+      'shield',
+      card(
+        row('Block ads and trackers', `${info.blocked.toLocaleString()} blocked since ${since}.`, toggle('adblock')),
+        row('Filter lists', 'EasyList, EasyPrivacy and others. Updated automatically.', refresh),
       ),
-      el('div', { class: 'row' }, el('div', { class: 'label' }, 'Time range'), range, clearBtn),
+      el('p', { class: 'group-label' }, 'Exceptions'),
+      card(allowList),
+    ),
+    panel(
+      'Security',
+      'lock',
+      card(
+        row('Always use secure connections', 'Upgrade sites to HTTPS and fall back to HTTP only when a site does not support it.', toggle('httpsUpgrade')),
+        row('Global Privacy Control', 'Tell websites not to sell or share your data.', toggle('gpc')),
+      ),
+    ),
+    panel('Site permissions', 'globe', card(perms)),
+    panel(
+      'Clear browsing data',
+      'trash-2',
+      card(
+        el(
+          'div',
+          { class: 'checks' },
+          el('label', {}, checks.history, 'Browsing history'),
+          el('label', {}, checks.cookies, 'Cookies and site data'),
+          el('label', {}, checks.cache, 'Cached images and files'),
+          el('label', {}, checks.downloads, 'Download history'),
+        ),
+        el('div', { class: 'row' }, el('div', { class: 'label' }, 'Time range'), range, clearBtn),
+      ),
     ),
   );
 }
 
 function downloads() {
   const path = el('div', { class: 'path' }, S.downloadsDir);
-  const change = el('button', { class: 'button' }, 'Change…');
+  const change = el('button', { class: 'button' }, 'Change');
   change.onclick = async () => (path.textContent = await api.call('chooseDownloadsFolder'));
-  return section(
-    'downloads',
-    'Downloads',
-    null,
-    card(row('Location', path, change), row('Ask where to save each file', null, toggle('askWhereToSave'))),
-  );
+  return section('downloads', null, panel('Files', 'folder-open', card(row('Location', path, change), row('Ask where to save each file', null, toggle('askWhereToSave')))));
 }
 
 async function extensions() {
   const list = el('div', { class: 'mini-list' });
   const render = (items) => {
     list.textContent = '';
-    if (!items.length) list.append(el('div', { class: 'row' }, el('div', { class: 'label sub' }, 'No extensions loaded.')));
-    for (const x of items) {
-      list.append(
-        el(
-          'div',
-          { class: 'list-item' },
-          el('span', { class: 'fav', html: icon('puzzle', 16) }),
-          el('span', { class: 'host' }, `${x.name} ${x.version}${x.missing ? ' (folder missing)' : ''}`),
-          el('button', { class: 'icon-btn', title: 'Remove', html: icon('x', 15), onclick: async () => render(await api.call('extensionsRemove', x.dir)) }),
-        ),
-      );
-    }
+    if (!items.length) list.append(row('No extensions installed', null, null));
+    for (const x of items) list.append(listRow(`${x.name} ${x.version}${x.missing ? ' (folder missing)' : ''}`, 'Remove', async () => render(await api.call('extensionsRemove', x.dir))));
   };
   render(await api.call('extensionsList'));
-  const add = el('button', { class: 'button' }, 'Load unpacked…');
+  const add = el('button', { class: 'button' }, 'Load unpacked');
   add.onclick = async () => {
     try {
       render(await api.call('extensionsAdd'));
     } catch (err) {
-      toast(`Couldn’t load that folder: ${String(err.message || err).replace(/^Error invoking remote method '[^']+': /, '')}`);
+      toast(`Couldn’t load extension: ${errorText(err)}`);
     }
   };
   return section(
     'extensions',
-    'Extensions',
-    'Experimental. LionsBrows can load unpacked Chrome extensions (a folder with a manifest.json). Simple extensions work best; many Chrome APIs are not available.',
-    card(row('Unpacked extensions', 'Applies to normal windows after a restart.', add), list),
+    'Experimental. Load an unpacked Chrome extension folder. Only part of the Chrome extension APIs is available.',
+    panel('Installed', 'puzzle', card(row('Unpacked extensions', 'Takes effect in new windows.', add), list)),
   );
 }
 
@@ -326,7 +497,7 @@ async function shortcuts() {
   const keys = await api.call('shortcuts');
   const table = el('div', { class: 'keys-table' });
   for (const k of keys) table.append(el('div', {}, k.title), el('div', { class: 'k' }, k.keys));
-  return section('shortcuts', 'Keyboard shortcuts', 'Press Ctrl+K (⌘K on Mac) and type “>” to search every command.', card(table));
+  return section('shortcuts', 'Press Ctrl+K (⌘K on Mac) and type “>” to find any command.', card(table));
 }
 
 async function about() {
@@ -335,56 +506,82 @@ async function about() {
   folder.onclick = () => api.call('openDataFolder');
   return section(
     'about',
-    'About LionsBrows',
     null,
     card(
       el(
         'div',
         { class: 'about' },
         el('img', { src: 'lions://assets/logo.svg', alt: '' }),
-        el(
-          'div',
-          {},
-          el('h3', {}, `LionsBrows ${a.version}`),
-          el('div', { class: 'versions' }, `Chromium ${a.chrome}`, el('br'), `Electron ${a.electron} · Node ${a.node}`, el('br'), a.platform),
-        ),
+        el('div', {}, el('h3', {}, `LionsBrows ${a.version}`), el('div', { class: 'versions' }, `Chromium ${a.chrome}`, el('br'), `Electron ${a.electron} · Node ${a.node}`, el('br'), a.platform)),
       ),
-      row('Source code', 'Open source under the MIT license.', el('a', { href: 'https://github.com/aivie373736/LionsBrows', class: 'button' }, 'GitHub')),
-      row('Your data', 'History, bookmarks and settings are stored only on this computer.', folder),
+      row('Source code', 'MIT license', el('a', { href: 'https://github.com/aivie373736/LionsBrows', class: 'button' }, 'View on GitHub')),
+      row('Profile data', 'History, bookmarks and settings are stored on this device only.', folder),
     ),
   );
 }
 
-// ------------------------------------------------------------------ page
+function setupSearch() {
+  const input = document.getElementById('settings-search');
+  const empty = document.getElementById('no-results');
+  document.getElementById('search-icon').innerHTML = icon('search', 20);
+  const isHidden = (node) => node.classList.contains('search-hidden');
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    const matches = (node) => !q || node.textContent.toLowerCase().includes(q);
+    let any = false;
+    for (const sec of document.querySelectorAll('.settings-section')) {
+      const sectionHit = matches(sec.querySelector('.section-title'));
+      let sectionVisible = false;
+      for (const p of sec.querySelectorAll('.panel')) {
+        const title = p.querySelector('.panel-title');
+        const panelHit = sectionHit || Boolean(title && matches(title));
+        const rows = [...p.querySelectorAll('.row, .list-item')];
+        for (const r of rows) r.classList.toggle('search-hidden', !(panelHit || matches(r)));
+        for (const c of p.querySelectorAll('.card')) {
+          const cardRows = [...c.querySelectorAll('.row, .list-item')];
+          c.classList.toggle('search-hidden', cardRows.length > 0 && cardRows.every(isHidden));
+        }
+        const visible = panelHit || rows.some((r) => !isHidden(r)) || (!rows.length && matches(p));
+        p.classList.toggle('search-hidden', !visible);
+        sectionVisible ||= visible;
+      }
+      sec.classList.toggle('search-hidden', !sectionVisible);
+      any ||= sectionVisible;
+    }
+    empty.hidden = any;
+    empty.textContent = `No settings match “${input.value.trim()}”.`;
+  });
+}
 
 async function build() {
   S = await api.call('getSettings');
+  applyTheme(S);
   applyAccent(S.accent);
   const nav = document.getElementById('nav');
   nav.append(el('div', { class: 'brand' }, el('img', { src: 'lions://assets/logo.svg', alt: '' }), 'Settings'));
-  for (const [id, title, ic] of SECTIONS) nav.append(el('a', { href: `#${id}`, 'data-id': id, html: `${icon(ic, 16)}<span></span>` }));
-  nav.querySelectorAll('a').forEach((a, i) => (a.querySelector('span').textContent = SECTIONS[i][1]));
+  for (const [id, title, ic] of SECTIONS) {
+    if (id === SECONDARY_FROM) nav.append(el('div', { class: 'nav-sep' }));
+    const a = el('a', { href: `#${id}`, 'data-id': id, html: icon(ic, 20) });
+    a.append(el('span', {}, title));
+    nav.append(a);
+  }
 
-  const main = document.getElementById('main');
-  const parts = await Promise.all([general(), appearance(), search(), tabs(), privacy(), downloads(), extensions(), shortcuts(), about()]);
-  for (const p of parts) main.append(...p.filter(Boolean));
+  const parts = await Promise.all([general(), appearance(), newtabSection(), search(), tabs(), privacy(), downloads(), extensions(), shortcuts(), about()]);
+  document.getElementById('sections').append(...parts);
+  setupSearch();
 
-  // Highlight the section in view.
   const links = new Map([...nav.querySelectorAll('a')].map((a) => [a.dataset.id, a]));
+  const setActive = (id) => links.forEach((a, key) => a.classList.toggle('active', key === id));
+  setActive(location.hash.slice(1) || SECTIONS[0][0]);
   const observer = new IntersectionObserver(
     (entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) {
-          links.forEach((a) => a.classList.remove('active'));
-          links.get(e.target.id)?.classList.add('active');
-        }
-      }
+      for (const e of entries) if (e.isIntersecting) setActive(e.target.id);
     },
-    { rootMargin: '0px 0px -70% 0px' },
+    { rootMargin: '-80px 0px -70% 0px' },
   );
-  main.querySelectorAll('.section-title[id]').forEach((h) => observer.observe(h));
+  document.querySelectorAll('.settings-section').forEach((s) => observer.observe(s));
   if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
 }
 
 build();
-initPage(); // keeps theme and accent in sync while the page is open
+initPage();

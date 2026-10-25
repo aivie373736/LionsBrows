@@ -8,7 +8,7 @@ body {
 #backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(20, 12, 4, 0.28);
+  background: rgba(0, 0, 0, 0.22);
   animation: fade 0.12s ease-out;
 }
 
@@ -20,7 +20,7 @@ body {
   transform: translateX(-50%);
   background: var(--surface);
   border: 1px solid var(--border-strong);
-  border-radius: 14px;
+  border-radius: 18px;
   box-shadow: var(--shadow);
   overflow: hidden;
   animation: pop 0.14s cubic-bezier(0.2, 0.9, 0.3, 1.2);
@@ -51,7 +51,7 @@ body {
   outline: none;
   background: transparent;
   color: var(--text);
-  font: 17px var(--font);
+  font: 16px var(--font);
 }
 #q::placeholder {
   color: var(--text-3);
@@ -79,9 +79,9 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 44px;
+  height: 42px;
   padding: 0 10px;
-  border-radius: 9px;
+  border-radius: 10px;
   cursor: default;
 }
 .item.sel {
@@ -90,7 +90,7 @@ body {
 .item .ico {
   width: 28px;
   height: 28px;
-  border-radius: 7px;
+  border-radius: 6px;
   display: grid;
   place-items: center;
   flex: none;

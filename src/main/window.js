@@ -1,10 +1,5 @@
 'use strict';
 
-// A LionsBrows window: a BaseWindow holding
-//   - the browser UI (sidebar, toolbar, panels) as one full-size view,
-//   - the visible tab(s) as views on top of it (two in split view),
-//   - an overlay view for the command bar, added only while it's open.
-
 const path = require('node:path');
 const { BaseWindow, WebContentsView, nativeTheme, screen } = require('electron');
 const { ctx } = require('./context');
@@ -19,18 +14,26 @@ const UI_HTML = path.join(__dirname, '..', 'ui', 'index.html');
 const OVERLAY_HTML = path.join(__dirname, '..', 'ui', 'overlay.html');
 const ICON = path.join(__dirname, '..', 'shared', 'icon.png');
 
-const TOOLBAR_H = 48;
-const SIDEBAR_W = 252;
-const SIDEBAR_COLLAPSED_W = 60;
-const PANEL_W = 340;
-const FIND_H = 46;
-const GAP = 8;
+const VERTICAL = { toolbar: 48, sidebar: 252, sidebarCollapsed: 60, panel: 340, find: 44, gap: 8, radius: 8 };
+const HORIZONTAL = { tabstrip: 40, navbar: 44, panel: 340, find: 44, gap: 8, radius: 10 };
+const BOOKMARKS_H = 30;
 
 const COLORS = {
-  dark: { bg: '#1b1916', fg: '#efe9e1' },
-  light: { bg: '#f3efe8', fg: '#2b2620' },
-  private: { bg: '#221b2e', fg: '#ece6f7' },
+  dark: { bg: '#1c1b21', fg: '#fbfbfe' },
+  light: { bg: '#efeef3', fg: '#15141a' },
+  private: { bg: '#1f1630', fg: '#f6f2ff' },
 };
+
+function liveContents(view) {
+  const wc = view && view.webContents;
+  return wc && !wc.isDestroyed() ? wc : null;
+}
+
+function readableOn(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const lum = 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
+  return lum > 150 ? '#15141a' : '#fbfbfe';
+}
 
 let privateCounter = 0;
 
@@ -43,7 +46,7 @@ class BrowserWin {
     this.isPrivate = isPrivate;
     this.privateId = isPrivate ? ++privateCounter : 0;
     this.focusedAt = Date.now();
-    this.spaces = new Map(); // workspaceId -> { tabs: Tab[], activeId, split: {a, b, ratio} | null }
+    this.spaces = new Map();
     this.tabsById = new Map();
     this.attached = new Set();
     this.closed = [];
@@ -67,11 +70,23 @@ class BrowserWin {
     else if (!urls.length) this.activate(this.space().activeId || this.space().tabs[0].id);
   }
 
-  // ---------------------------------------------------------------- window
-
   #colors() {
     if (this.isPrivate) return COLORS.private;
+    const frame = ctx.settings().frameColor;
+    if (frame) return { bg: frame, fg: readableOn(frame) };
     return nativeTheme.shouldUseDarkColors ? COLORS.dark : COLORS.light;
+  }
+
+  get horizontal() {
+    return ctx.settings().layout !== 'vertical';
+  }
+
+  #titlebarHeight() {
+    return this.horizontal ? HORIZONTAL.tabstrip : VERTICAL.toolbar;
+  }
+
+  #trafficLights() {
+    return this.horizontal ? { x: 13, y: 13 } : { x: 16, y: 17 };
   }
 
   #createWindow(restore) {
@@ -89,8 +104,8 @@ class BrowserWin {
       icon: ICON,
     };
     if (bounds && onSomeDisplay(bounds)) Object.assign(opts, { x: bounds.x, y: bounds.y });
-    if (process.platform === 'darwin') opts.trafficLightPosition = { x: 16, y: 17 };
-    else opts.titleBarOverlay = { color: c.bg, symbolColor: c.fg, height: TOOLBAR_H };
+    if (process.platform === 'darwin') opts.trafficLightPosition = this.#trafficLights();
+    else opts.titleBarOverlay = { color: c.bg, symbolColor: c.fg, height: this.#titlebarHeight() };
 
     this.win = new BaseWindow(opts);
     if (restore?.maximized) this.win.maximize();
@@ -124,15 +139,15 @@ class BrowserWin {
   applyTheme() {
     const c = this.#colors();
     this.ui.setBackgroundColor(c.bg);
-    if (process.platform !== 'darwin') this.win.setTitleBarOverlay?.({ color: c.bg, symbolColor: c.fg, height: TOOLBAR_H });
+    if (process.platform === 'darwin') this.win.setWindowButtonPosition?.(this.#trafficLights());
+    else this.win.setTitleBarOverlay?.({ color: c.bg, symbolColor: c.fg, height: this.#titlebarHeight() });
+    this.layout();
     this.scheduleState();
   }
 
   #onClose() {
     if (this.isPrivate) return;
     const normal = [...ctx.windows].filter((w) => !w.isPrivate);
-    // Closing one of several windows means "I'm done with these tabs".
-    // Closing the last window keeps it for session restore.
     if (!ctx.quitting && normal.length > 1) this.forget = true;
     require('./session').saveNow();
   }
@@ -141,7 +156,7 @@ class BrowserWin {
     ctx.windows.delete(this);
     for (const tab of this.tabsById.values()) tab.destroy();
     this.tabsById.clear();
-    for (const view of [this.ui, this.overlay]) if (view && !view.webContents.isDestroyed()) view.webContents.close();
+    for (const view of [this.ui, this.overlay]) liveContents(view)?.close();
     if (this.isPrivate) {
       const ses = require('electron').session.fromPartition(ctx.partitionFor(null, true, this.privateId));
       ses.clearStorageData().catch(() => {});
@@ -155,8 +170,6 @@ class BrowserWin {
     for (const t of this.tabsById.values()) if (t.wc === wc) return true;
     return false;
   }
-
-  // ---------------------------------------------------------------- spaces & tabs
 
   space(id = this.activeWorkspaceId) {
     let s = this.spaces.get(id);
@@ -312,7 +325,6 @@ class BrowserWin {
   }
 
   tabDestroyed(tab) {
-    // The page closed itself (window.close()) or its contents went away.
     if (this.tabsById.has(tab.id)) this.closeTab(tab.id);
   }
 
@@ -347,7 +359,7 @@ class BrowserWin {
   }
 
   #sortPinned(s) {
-    s.tabs.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)); // stable: keeps relative order
+    s.tabs.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   }
 
   togglePin(id) {
@@ -355,7 +367,6 @@ class BrowserWin {
     if (!tab) return;
     tab.pinned = !tab.pinned;
     const s = this.space(tab.workspaceId);
-    // Unpinned tabs go to the top of the regular list, newly pinned to the end of the pinned ones.
     s.tabs.splice(s.tabs.indexOf(tab), 1);
     const firstUnpinned = s.tabs.findIndex((t) => !t.pinned);
     s.tabs.splice(firstUnpinned === -1 ? s.tabs.length : firstUnpinned, 0, tab);
@@ -363,7 +374,6 @@ class BrowserWin {
     this.scheduleSave();
   }
 
-  /** Move a tab before `beforeId` (or to the end of its section when null). */
   moveTab(id, beforeId, pinned) {
     const tab = this.tabById(id);
     if (!tab) return;
@@ -387,7 +397,6 @@ class BrowserWin {
     tab.sleep();
   }
 
-  /** Recreate a tab's page (e.g. after its workspace switched cookie jars). */
   rebuildTab(tab) {
     if (!tab.view) return;
     tab.audible = false;
@@ -410,8 +419,6 @@ class BrowserWin {
     this.attached.delete(view);
     if (!this.win.isDestroyed()) this.win.contentView.removeChildView(view);
   }
-
-  // ---------------------------------------------------------------- workspaces
 
   switchWorkspace(id) {
     if (this.isPrivate || !ctx.workspaces().some((w) => w.id === id) || id === this.activeWorkspaceId) return;
@@ -436,18 +443,15 @@ class BrowserWin {
     const from = this.space(tab.workspaceId);
     const wasActive = from.activeId === tab.id;
     const oldPartition = tab.partition;
-    // Take it out of its current workspace...
     from.tabs.splice(from.tabs.indexOf(tab), 1);
     if (from.split && (from.split.a === id || from.split.b === id)) from.split = null;
     if (wasActive) from.activeId = from.tabs[0]?.id ?? null;
     this.detachView(tab.view);
-    // ...and into the new one.
     tab.workspaceId = wsId;
     const to = this.space(wsId);
     to.tabs.push(tab);
     this.#sortPinned(to);
     if (!to.activeId) to.activeId = tab.id;
-    // Different cookie jar? The page has to be reloaded in the new session.
     if (tab.partition !== oldPartition && tab.view) {
       tab.audible = false;
       tab.sleep();
@@ -458,8 +462,6 @@ class BrowserWin {
     this.scheduleState();
     this.scheduleSave();
   }
-
-  // ---------------------------------------------------------------- split view
 
   toggleSplit() {
     const s = this.space();
@@ -508,20 +510,32 @@ class BrowserWin {
     this.scheduleState();
   }
 
-  // ---------------------------------------------------------------- layout
-
   #paneRects(width, height) {
-    const left = ctx.settings().sidebarCollapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W;
-    const top = TOOLBAR_H + (this.find.open ? FIND_H : 0);
-    const right = this.panel ? PANEL_W : GAP;
-    const area = { x: left, y: top, width: Math.max(50, width - left - right), height: Math.max(50, height - top - GAP) };
+    const s = ctx.settings();
+    const bookmarksBar = s.showBookmarksBar ? BOOKMARKS_H : 0;
+    let area;
+    let gap;
+    if (this.horizontal) {
+      const top = HORIZONTAL.tabstrip + HORIZONTAL.navbar + bookmarksBar;
+      const right = this.panel ? HORIZONTAL.panel : HORIZONTAL.gap;
+      const bottom = HORIZONTAL.gap + (this.find.open ? HORIZONTAL.find : 0);
+      area = { x: HORIZONTAL.gap, y: top, width: Math.max(50, width - HORIZONTAL.gap - right), height: Math.max(50, height - top - bottom) };
+      gap = HORIZONTAL.gap;
+    } else {
+      const left = s.sidebarCollapsed ? VERTICAL.sidebarCollapsed : VERTICAL.sidebar;
+      const top = VERTICAL.toolbar + bookmarksBar;
+      const right = this.panel ? VERTICAL.panel : VERTICAL.gap;
+      const bottom = VERTICAL.gap + (this.find.open ? VERTICAL.find : 0);
+      area = { x: left, y: top, width: Math.max(50, width - left - right), height: Math.max(50, height - top - bottom) };
+      gap = VERTICAL.gap;
+    }
     this.lastArea = area;
     const visible = this.visibleTabs();
     if (visible.length === 2) {
-      const w1 = Math.round((area.width - GAP) * this.space().split.ratio);
+      const w1 = Math.round((area.width - gap) * this.space().split.ratio);
       return [
         [visible[0], { x: area.x, y: area.y, width: w1, height: area.height }],
-        [visible[1], { x: area.x + w1 + GAP, y: area.y, width: area.width - w1 - GAP, height: area.height }],
+        [visible[1], { x: area.x + w1 + gap, y: area.y, width: area.width - w1 - gap, height: area.height }],
       ];
     }
     return visible.map((t) => [t, area]);
@@ -547,7 +561,7 @@ class BrowserWin {
           added = true;
         }
         view.setBounds(r);
-        view.setBorderRadius?.(fs ? 0 : 10);
+        view.setBorderRadius?.(fs ? 0 : VERTICAL.radius);
       } else if (tab.view) {
         this.detachView(tab.view);
       }
@@ -575,7 +589,7 @@ class BrowserWin {
   }
 
   toggleSidebar() {
-    ctx.setSetting('sidebarCollapsed', !ctx.settings().sidebarCollapsed); // re-lays out every window
+    ctx.setSetting('sidebarCollapsed', !ctx.settings().sidebarCollapsed);
   }
 
   togglePanel(name) {
@@ -583,8 +597,6 @@ class BrowserWin {
     this.layout();
     this.scheduleState();
   }
-
-  // ---------------------------------------------------------------- find in page
 
   openFind() {
     this.find.open = true;
@@ -623,8 +635,6 @@ class BrowserWin {
     if (refocus) this.focusActive();
   }
 
-  // ---------------------------------------------------------------- command bar overlay
-
   #ensureOverlay() {
     if (this.overlay) return this.overlayReady;
     this.overlay = new WebContentsView({ webPreferences: { preload: UI_PRELOAD, sandbox: true, contextIsolation: true, transparent: true, spellcheck: false } });
@@ -656,9 +666,6 @@ class BrowserWin {
     this.focusActive();
   }
 
-  // ---------------------------------------------------------------- navigation helpers
-
-  /** Open whatever the user typed in the current tab or a new one. */
   openInput(text, { newTab = false } = {}) {
     const result = omnibox.classify(text, ctx.settings().searchEngine);
     if (result) this.openUrl(result.url, { newTab, typed: true });
@@ -698,8 +705,6 @@ class BrowserWin {
     };
   }
 
-  // ---------------------------------------------------------------- state for the UI
-
   state() {
     const s = this.space();
     const active = this.activeTab();
@@ -717,18 +722,22 @@ class BrowserWin {
         adblockOn: isWeb && ctx.settings().adblock && !adblock.isAllowlisted(url),
       };
     }
+    const settings = ctx.settings();
     return {
       isPrivate: this.isPrivate,
       platform: process.platform,
       dark: nativeTheme.shouldUseDarkColors,
       accent: ctx.accentColor(),
+      layout: this.horizontal ? 'horizontal' : 'vertical',
+      frameColor: this.isPrivate ? '' : settings.frameColor,
+      bookmarks: settings.showBookmarksBar ? bookmarks.all().slice(0, 50).map((b) => ({ id: b.id, url: b.url, title: b.title, favicon: b.favicon })) : null,
       sidebarCollapsed: ctx.settings().sidebarCollapsed,
       panel: this.panel,
       htmlFullscreen: Boolean(this.htmlFullscreenTab),
       windowFullscreen: this.win.isFullScreen(),
       workspaces: this.isPrivate
         ? []
-        : ctx.workspaces().map((w) => ({ id: w.id, name: w.name, icon: w.icon, isolated: Boolean(w.isolated), count: this.spaces.get(w.id)?.tabs.length || 0 })),
+        : ctx.workspaces().map((w) => ({ id: w.id, name: w.name, color: w.color, isolated: Boolean(w.isolated), count: this.spaces.get(w.id)?.tabs.length || 0 })),
       activeWorkspaceId: this.activeWorkspaceId,
       tabs: s.tabs.map((t) => t.state()),
       activeTabId: s.activeId,
@@ -747,9 +756,10 @@ class BrowserWin {
     this.statePending = true;
     setImmediate(() => {
       this.statePending = false;
-      if (this.ui.webContents.isDestroyed()) return;
+      const wc = liveContents(this.ui);
+      if (!wc || this.win.isDestroyed()) return;
       const state = this.state();
-      this.ui.webContents.send('ui:state', state);
+      wc.send('ui:state', state);
       const title = state.nav?.title ? `${state.nav.title} - LionsBrows` : 'LionsBrows';
       if (this.win.getTitle() !== title) this.win.setTitle(this.isPrivate ? `${title} (Private)` : title);
     });
@@ -779,4 +789,4 @@ class BrowserWin {
   }
 }
 
-module.exports = { BrowserWin, TOOLBAR_H };
+module.exports = { BrowserWin };

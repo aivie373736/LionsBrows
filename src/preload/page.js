@@ -1,8 +1,5 @@
 'use strict';
 
-// Preload for tabs. Websites get nothing; LionsBrows' own lions:// pages get
-// a small API (the main process checks the caller's URL again on every call).
-
 const { contextBridge, ipcRenderer } = require('electron');
 
 if (location.protocol === 'lions:') {

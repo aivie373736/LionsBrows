@@ -1,7 +1,5 @@
 'use strict';
 
-// Helpers shared by the lions:// pages.
-
 const api = window.lions;
 
 function el(tag, attrs = {}, ...children) {
@@ -20,12 +18,12 @@ function el(tag, attrs = {}, ...children) {
 function onAccent(hex) {
   const n = parseInt(hex.slice(1), 16);
   const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 150 ? '#2a1800' : '#ffffff';
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 150 ? '#15141a' : '#ffffff';
 }
 
 function applyAccent(hex) {
-  document.documentElement.style.setProperty('--accent', hex);
-  document.documentElement.style.setProperty('--on-accent', onAccent(hex));
+  document.documentElement.style.setProperty('--accent-base', hex);
+  document.documentElement.style.setProperty('--on-accent-base', onAccent(hex));
 }
 
 function applyTheme({ dark, isPrivate }) {

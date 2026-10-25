@@ -1,10 +1,5 @@
 'use strict';
 
-// Every workspace (and every private window) can have its own Electron
-// session. This module configures each one the same way: user agent,
-// lions:// pages, ad blocking, HTTPS upgrades, privacy headers, permissions
-// and downloads.
-
 const { session, app } = require('electron');
 const { ctx } = require('./context');
 const adblock = require('./adblock');
@@ -14,9 +9,8 @@ const protocol = require('./protocol');
 const extensions = require('./extensions');
 
 const configured = new WeakSet();
-const upgrades = new Map(); // webContentsId -> { httpUrl, host, count, at }
+const upgrades = new Map();
 
-/** A plain Chrome user agent so sites don't treat us as an "embedded" browser. */
 function chromeUserAgent() {
   const major = process.versions.chrome.split('.')[0];
   const platform =
@@ -45,7 +39,6 @@ function httpsUpgrade(details) {
   if (isLocalHost(u.hostname) || u.port) return null;
   if (ctx.config.get('httpOnlyHosts').includes(u.hostname)) return null;
 
-  // A site that redirects https -> http would loop forever; give up after 3 tries.
   const prev = upgrades.get(details.webContentsId);
   const recent = prev && prev.host === u.hostname && Date.now() - prev.at < 5000;
   const count = recent ? prev.count + 1 : 1;
@@ -64,10 +57,6 @@ function markHttpOnly(host) {
   });
 }
 
-/**
- * If a navigation we upgraded to HTTPS failed, return the original http:// URL
- * (and remember that this host doesn't do HTTPS).
- */
 function consumeFailedUpgrade(webContentsId, failedUrl) {
   const rec = upgrades.get(webContentsId);
   if (!rec) return null;

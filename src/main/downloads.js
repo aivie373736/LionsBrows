@@ -7,13 +7,12 @@ const { ctx } = require('./context');
 const { JsonStore } = require('./store');
 
 let nextId = 1;
-const live = new Map(); // id -> { item, record }
+const live = new Map();
 let store = null;
 let notifyTimer = null;
 
 function init() {
   store = new JsonStore(path.join(app.getPath('userData'), 'downloads.json'), { items: [] });
-  // Anything that was still running when the app quit is now interrupted.
   for (const r of store.get('items')) if (r.state === 'progressing') r.state = 'interrupted';
   nextId = Math.max(0, ...store.get('items').map((r) => r.id)) + 1;
 }
@@ -23,7 +22,6 @@ function downloadsDir() {
   return custom && fs.existsSync(custom) ? custom : app.getPath('downloads');
 }
 
-// "file.zip" -> "file (1).zip" if it already exists.
 function uniquePath(dir, filename) {
   const safe = filename.replace(/[\\/:*?"<>|]/g, '_') || 'download';
   const ext = path.extname(safe);
@@ -57,11 +55,11 @@ function attach(ses, { isPrivate }) {
       record.received = item.getReceivedBytes();
       record.total = item.getTotalBytes();
       record.paused = item.isPaused();
-      record.stalled = state === 'interrupted'; // network hiccup; Chromium may resume it
+      record.stalled = state === 'interrupted';
       notify();
     });
     item.once('done', (_e, state) => {
-      record.state = state; // completed | cancelled | interrupted
+      record.state = state;
       record.received = item.getReceivedBytes();
       record.path = item.getSavePath();
       live.delete(record.id);

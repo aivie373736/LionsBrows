@@ -1,8 +1,5 @@
 'use strict';
 
-// Pure helpers for turning whatever the user typed into something to open.
-// No Electron imports, so this is unit-tested with plain Node.
-
 const { parse } = require('tldts');
 const { searchUrl, parseBang } = require('./search-engines');
 
@@ -10,7 +7,6 @@ const SCHEME_RE = /^(https?|file|lions|about|data|blob|chrome|devtools|view-sour
 const IPV4_RE = /^(\d{1,3})(\.\d{1,3}){3}$/;
 
 function hostOf(text) {
-  // Strip path/query/fragment and userinfo to get the host[:port] part.
   const noPath = text.split(/[/?#]/)[0];
   const host = noPath.includes('@') ? noPath.split('@').pop() : noPath;
   return host;
@@ -21,16 +17,12 @@ function looksLikeHost(host) {
   if (!bare) return false;
   if (bare === 'localhost' || bare.endsWith('.localhost')) return true;
   if (IPV4_RE.test(bare)) return bare.split('.').every((p) => Number(p) <= 255);
-  if (/^\[[0-9a-f:]+\]$/i.test(bare)) return true; // IPv6 literal
+  if (/^\[[0-9a-f:]+\]$/i.test(bare)) return true;
   if (!/^[a-z0-9.-]+$/i.test(bare) || bare.startsWith('.') || bare.endsWith('.')) return false;
   const info = parse(bare, { allowPrivateDomains: true });
   return Boolean(info.domain && (info.isIcann || info.isPrivate)) || bare.endsWith('.local') || bare.endsWith('.lan');
 }
 
-/**
- * Classify raw input.
- * @returns {{type:'url', url:string} | {type:'search', url:string, query:string} | {type:'bang', url:string, query:string, name:string} | null}
- */
 function classify(input, engineId = 'duckduckgo') {
   const text = (input || '').trim();
   if (!text) return null;
@@ -39,7 +31,6 @@ function classify(input, engineId = 'duckduckgo') {
   if (bang) return { type: 'bang', url: bang.url, query: bang.query, name: bang.name };
 
   if (SCHEME_RE.test(text)) {
-    // A scheme with a space after it ("about: cats") is a search, not a URL.
     if (!/\s/.test(text)) return { type: 'url', url: text };
   }
 
@@ -55,7 +46,6 @@ function classify(input, engineId = 'duckduckgo') {
   return { type: 'search', url: searchUrl(engineId, text), query: text };
 }
 
-/** Pretty version of a URL for display in the address bar. */
 function displayUrl(url) {
   if (!url || url.startsWith('lions://newtab')) return '';
   try {
@@ -66,15 +56,9 @@ function displayUrl(url) {
       return host + rest;
     }
   } catch {
-    /* fall through */
   }
   return url;
 }
-
-// ---------------------------------------------------------------------------
-// Calculator: a tiny recursive-descent parser so we never eval() user input.
-// Supports + - * / % ^, parentheses, decimals, unary minus, and pi/e.
-// ---------------------------------------------------------------------------
 
 function calculate(input) {
   const src = (input || '').replace(/^=\s*/, '').replace(/,/g, '.').replace(/×/g, '*').replace(/÷/g, '/').trim();
@@ -129,7 +113,7 @@ function calculate(input) {
     skip();
     if (peek() === '^') {
       pos++;
-      return Math.pow(base, power()); // right-associative
+      return Math.pow(base, power());
     }
     return base;
   }

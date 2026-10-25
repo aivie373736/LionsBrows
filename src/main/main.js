@@ -5,31 +5,24 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { app, nativeTheme } = require('electron');
 
-// Tests and portable setups can point LionsBrows at a separate profile folder.
 if (process.env.LIONSBROWS_USER_DATA) app.setPath('userData', path.resolve(process.env.LIONSBROWS_USER_DATA));
 
-// Log unexpected errors instead of Electron's default modal error box, which
-// would freeze the whole browser until it's dismissed.
 process.on('uncaughtException', (err) => console.error('[main] uncaught exception:', err));
 process.on('unhandledRejection', (err) => {
-  // A page that navigates away mid-request (e.g. while the ad blocker injects
-  // its styles) is a normal race, not a bug worth reporting.
-  if (/Render frame was disposed|WebContents was destroyed/.test(String(err && err.message))) return;
+  if (/Render frame was disposed|WebContents was destroyed|Script failed to execute/.test(String(err && err.message))) return;
   console.error('[main] unhandled rejection:', err);
 });
 
-// node:sqlite still prints an "experimental" warning in some Node versions.
 process.removeAllListeners('warning');
 process.on('warning', (w) => {
   if (w.name !== 'ExperimentalWarning') console.warn(w);
 });
 
 const protocol = require('./protocol');
-protocol.registerScheme(); // must happen before the app is ready
+protocol.registerScheme();
 
 const { ctx } = require('./context');
 
-// Lets the end-to-end tests (test/e2e.mjs) reach into the main process.
 if (process.env.LIONSBROWS_TEST === '1') global.lionsTest = { ctx, require };
 
 function urlsFromArgv(argv) {
@@ -102,7 +95,6 @@ async function start() {
   ipc.init();
   adblock.init().catch((err) => console.warn('[adblock]', err.message));
 
-  // Open the previous session, or a fresh window.
   const saved = sessionStore.saved();
   if (saved.length) {
     saved.forEach((restore, i) => new BrowserWin({ restore, urls: i === 0 ? pendingUrls : [] }));
@@ -119,8 +111,8 @@ async function start() {
 
   ctx.events.on('settings-changed', (key) => {
     for (const w of ctx.windows) {
-      if (key === 'sidebarCollapsed') w.layout();
-      if (key === 'theme') w.applyTheme();
+      if (key === 'theme' || key === 'frameColor' || key === 'layout') w.applyTheme();
+      else if (key === 'sidebarCollapsed' || key === 'showBookmarksBar') w.layout();
       w.scheduleState();
     }
     internalApi.broadcast(key === 'theme' ? 'theme-changed' : 'settings-changed', ctx.settings());
@@ -162,7 +154,6 @@ async function start() {
 }
 
 app.on('activate', () => {
-  // macOS: clicking the dock icon with no windows open.
   if (app.isReady() && ctx.windows.size === 0) {
     const { BrowserWin } = require('./window');
     new BrowserWin({ restore: require('./session').saved()[0] || null });
@@ -177,13 +168,11 @@ app.on('will-quit', () => {
   try {
     ctx.history?.close();
   } catch {
-    /* already closed */
   }
 });
 
 app.on('web-contents-created', (_e, wc) => {
   wc.on('will-attach-webview', (event) => event.preventDefault());
-  // Pop-up windows (e.g. "Sign in with Google") open their own links as tabs.
   if (wc.getType() === 'window') {
     wc.setWindowOpenHandler(({ url }) => {
       const w = ctx.lastFocusedWindow();

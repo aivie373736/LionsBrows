@@ -1,49 +1,41 @@
 <p align="center">
-  <img src="src/shared/logo.svg" width="120" alt="LionsBrows logo: a lion raising one eyebrow">
+  <img src="src/shared/logo.svg" width="96" alt="LionsBrows">
 </p>
 
 <h1 align="center">LionsBrows</h1>
 
-<p align="center">
-  A fast, private browser built on Chromium, with vertical tabs, workspaces, split view, a command bar and a built-in ad blocker.<br>
-  <sub>(Lion + eyebrows + browser. Yes, the lion is raising one eyebrow at the ads.)</sub>
-</p>
+<p align="center">A fast, private web browser built on Chromium.</p>
 
 <p align="center">
-  <img src="docs/screenshots/newtab.png" width="860" alt="LionsBrows new tab page">
+  <img src="docs/screenshots/new-tab.png" width="860" alt="LionsBrows new tab page">
 </p>
 
 ## Features
 
-| | |
-|---|---|
-| **Vertical tabs** | Tabs live in a sidebar, so long titles stay readable. Drag to reorder; drag to the top to **pin**. Collapse the sidebar to icons with <kbd>Ctrl</kbd>+<kbd>B</kbd>. |
-| **Workspaces** | Separate sets of tabs for work, school or gaming. One click to switch. Right-click a workspace and turn on **separate logins** to be signed in to two accounts at once. |
-| **Split view** | Two tabs side by side (<kbd>Ctrl</kbd>+<kbd>\\</kbd>). Drag the divider to resize. |
-| **Command bar** | <kbd>Ctrl</kbd>+<kbd>K</kbd> searches open tabs, bookmarks, history and the web, runs any command (type `>`), does math (`12*(3+4)`) and supports **bangs**: `!yt lofi`, `!w lions`, `!gh electron`. |
-| **Ad & tracker blocker** | Built in and on by default (EasyList, EasyPrivacy and more, through Ghostery's engine). The shield in the address bar shows the count and turns blocking off per site. |
-| **Privacy** | No telemetry. Automatic HTTPS upgrades, Global Privacy Control, private windows with in-memory sessions, and per-site permission prompts for camera, mic and location. |
-| **Tab sleeping** | Background tabs go to sleep after 30 minutes (configurable) to free memory, then wake up instantly with their back/forward history. |
-| **Notes** | A notepad in the side panel (<kbd>Ctrl</kbd>+<kbd>E</kbd>), one per workspace, saved automatically. |
-| **The basics, done properly** | History with search, bookmarks (with import/export from Chrome/Firefox/Edge), a download manager, find in page, zoom, full-page screenshots, PDF viewer, spell check, session restore, reopen closed tabs, picture-in-picture, dark mode, accent colors. |
+- **Tabs your way:** tabs on top or in a vertical sidebar, pinned tabs, drag to reorder, and inactive tabs that sleep to save memory.
+- **Workspaces:** separate sets of tabs, optionally with their own cookies so you can stay signed in to two accounts at once.
+- **Split view:** two tabs side by side with an adjustable divider.
+- **Command bar:** press <kbd>Ctrl</kbd>+<kbd>K</kbd> to search open tabs, bookmarks, history and commands. It also does calculations and supports site shortcuts such as `!yt` and `!w`.
+- **Search engine choice:** pick Google, DuckDuckGo, Bing, Brave Search, Ecosia, Startpage, Qwant, Yahoo or a custom engine, right from the new tab page.
+- **Personalization:** use your own video, image or a solid color as the new tab background. You can also choose the accent color and toolbar color, and switch between light and dark mode.
+- **Tracking protection:** built-in ad and tracker blocking with per-site exceptions, automatic HTTPS upgrades, Global Privacy Control and private windows.
+- **Everyday tools:** history, bookmarks with import and export, a download manager, find in page, zoom, full-page screenshots, a PDF viewer, spell check, session restore and a notes panel.
 
 <p align="center">
-  <img src="docs/screenshots/command-bar.png" width="430" alt="Command bar doing math">
-  <img src="docs/screenshots/dark-mode.png" width="430" alt="Dark mode">
-  <img src="docs/screenshots/private-window.png" width="430" alt="Private window">
-  <img src="docs/screenshots/settings.png" width="430" alt="Settings">
+  <img src="docs/screenshots/settings-dark.png" width="430" alt="Settings in dark mode">
+  <img src="docs/screenshots/video-background.png" width="430" alt="Video background and customize panel">
+  <img src="docs/screenshots/search-engines.png" width="430" alt="Search engine picker">
+  <img src="docs/screenshots/vertical-tabs.png" width="430" alt="Vertical tabs with a custom toolbar color">
 </p>
 
 ## Download
 
-Installers for **Windows**, **macOS** and **Linux** are built automatically by GitHub Actions:
+Installers for Windows, macOS and Linux are built by GitHub Actions on every push.
 
-- **Releases:** see the [Releases page](../../releases) for tagged versions.
-- **Latest build:** open the [Actions tab](../../actions), pick the newest green run, and download `LionsBrows-Windows` / `-macOS` / `-Linux` under *Artifacts*.
+- Tagged versions are published on the [Releases](../../releases) page.
+- The latest build is available from the [Actions](../../actions) tab: open the most recent successful run and download the artifact for your system.
 
-Notes:
-- **Windows:** the installer isn't code-signed yet, so SmartScreen may warn. Click *More info → Run anyway*. To make LionsBrows your default browser, open *Settings → Default browser* inside LionsBrows.
-- **macOS:** the app isn't notarized. If macOS says it's damaged, run `xattr -cr /Applications/LionsBrows.app` once.
+The builds are not code-signed yet. On Windows, SmartScreen may show a warning (select *More info*, then *Run anyway*). On macOS, run `xattr -cr /Applications/LionsBrows.app` if the app is reported as damaged.
 
 ## Keyboard shortcuts
 
@@ -54,64 +46,48 @@ Notes:
 | New tab / close tab | <kbd>Ctrl</kbd>+<kbd>T</kbd> / <kbd>Ctrl</kbd>+<kbd>W</kbd> | <kbd>⌘</kbd><kbd>T</kbd> / <kbd>⌘</kbd><kbd>W</kbd> |
 | Reopen closed tab | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> | <kbd>⌘</kbd><kbd>⇧</kbd><kbd>T</kbd> |
 | Split view | <kbd>Ctrl</kbd>+<kbd>\\</kbd> | <kbd>⌘</kbd><kbd>\\</kbd> |
-| Toggle sidebar | <kbd>Ctrl</kbd>+<kbd>B</kbd> | <kbd>⌘</kbd><kbd>B</kbd> |
-| Notes / downloads | <kbd>Ctrl</kbd>+<kbd>E</kbd> / <kbd>Ctrl</kbd>+<kbd>J</kbd> | <kbd>⌘</kbd><kbd>E</kbd> / <kbd>⌘</kbd><kbd>⇧</kbd><kbd>J</kbd> |
+| Find in page | <kbd>Ctrl</kbd>+<kbd>F</kbd> | <kbd>⌘</kbd><kbd>F</kbd> |
 | Private window | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> | <kbd>⌘</kbd><kbd>⇧</kbd><kbd>N</kbd> |
 
-The full list is in *Settings → Keyboard shortcuts*. Press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type `>` to search every command.
+All shortcuts are listed under *Settings → Keyboard shortcuts*.
 
 ## Development
 
-You need [Node.js](https://nodejs.org) 22 or newer.
+Requires Node.js 22 or later.
 
 ```bash
 git clone https://github.com/aivie373736/LionsBrows.git
 cd LionsBrows
 npm install
-npm start          # run the browser
-npm test           # unit tests
-npm run test:e2e   # end-to-end tests (needs Playwright: npm i -D playwright)
-npm run dist       # build an installer for your OS into dist/
+npm start
 ```
 
-On Linux without a screen, run the end-to-end tests with `xvfb-run -a npm run test:e2e`. Add `SHOTS=./shots` to save screenshots.
+| Command | Description |
+|---|---|
+| `npm start` | Run the browser |
+| `npm test` | Unit tests |
+| `npm run test:e2e` | End-to-end tests (requires Playwright; on Linux run with `xvfb-run -a`) |
+| `npm run dist` | Build an installer for the current platform |
+| `npm run icons` | Regenerate icon assets |
 
-### How it's built
-
-LionsBrows runs on [Electron](https://www.electronjs.org), so pages render with the same Chromium engine as Chrome. Everything around the pages is LionsBrows' own code:
+### Project structure
 
 ```
 src/
-  main/        the "engine room" (Node.js, main process)
-    window.js      a browser window: the UI view + tab views + command bar overlay, layout, split view, workspaces
-    tab.js         one tab: its page, navigation, sleeping/waking, errors, zoom
-    sessions.js    per-workspace / private sessions: user agent, HTTPS upgrade, privacy headers
-    adblock.js     Ghostery filter engine wired into every session, with per-site allowlist
-    palette.js     the command bar: tabs, history, bookmarks, commands, math, search suggestions
-    actions.js     every command in one table (shortcuts, menus and the command bar use it)
-    history.js     SQLite history (Node's built-in node:sqlite) with frecency ranking
-    ...            downloads, permissions, bookmarks, menus, session restore, extensions
-  preload/     the tiny, locked-down bridges between pages and the main process
-  ui/          the browser chrome (sidebar, toolbar, panels) and the command bar overlay
-  pages/       built-in lions:// pages: new tab, settings, history, bookmarks, downloads, errors
-  shared/      logo, icons and design tokens shared by the UI and pages
+  main/      main process: windows, tabs, sessions, ad blocking, history, downloads, settings
+  preload/   bridges between pages and the main process
+  ui/        browser interface and command bar
+  pages/     built-in pages: new tab, settings, history, bookmarks, downloads, errors
+  shared/    logo, icons and theme
 ```
 
-Security basics: every page runs sandboxed with context isolation and without Node.js. Websites get no special APIs. LionsBrows' own `lions://` pages get a small API, and the main process re-checks the caller on every call.
+LionsBrows runs on [Electron](https://www.electronjs.org). Every page is sandboxed with context isolation and no Node.js access. Built-in `lions://` pages use a small API that the main process validates on every call.
 
 ### Known limitations
 
-- Chrome Web Store extensions don't install directly. *Settings → Extensions* can load unpacked extensions (experimental; Electron supports only part of the extension APIs).
-- There's no built-in password manager or sync yet.
-- Some Google sign-in flows can reject Chromium-based browsers that aren't Chrome. LionsBrows sends a standard Chrome user agent to avoid this.
-
-## Credits
-
-- [Electron](https://www.electronjs.org) and [Chromium](https://www.chromium.org)
-- [@ghostery/adblocker](https://github.com/ghostery/adblocker) (MPL-2.0) for ad and tracker blocking
-- [Lucide](https://lucide.dev) icons (ISC)
-- [tldts](https://github.com/remusao/tldts) for domain parsing
+- Chrome Web Store extensions cannot be installed directly. Unpacked extensions can be loaded from *Settings → Extensions* (experimental).
+- There is no built-in password manager or sync.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Third-party components are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

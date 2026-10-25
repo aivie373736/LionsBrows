@@ -1,7 +1,5 @@
 'use strict';
 
-// Session restore: remembers open windows, workspaces and tabs.
-
 const { ctx } = require('./context');
 
 let timer = null;
@@ -14,7 +12,6 @@ function saveNow() {
   clearTimeout(timer);
   timer = null;
   const windows = snapshot();
-  // Never overwrite a good session with "nothing" (e.g. the last window is closing).
   if (windows.length) ctx.sessionStore.set('windows', windows);
   ctx.sessionStore.flush();
 }

@@ -1,8 +1,5 @@
 'use strict';
 
-// Site permissions (camera, location, notifications...). Asks once per site
-// with a native dialog and remembers the answer unless you're in a private window.
-
 const { dialog, desktopCapturer, BaseWindow } = require('electron');
 const { ctx } = require('./context');
 
@@ -29,7 +26,7 @@ const DESCRIPTIONS = {
   fileSystem: 'edit files on your device',
 };
 
-const memory = new Map(); // decisions for private sessions (never written to disk)
+const memory = new Map();
 const pending = new Map();
 
 function describe(permission, details) {
@@ -116,12 +113,9 @@ function attach(ses, { isPrivate }) {
     const decisions = perms ? Object.entries(perms).filter(([k]) => k === permission || k.startsWith(`${permission}:`)) : [];
     if (decisions.some(([, v]) => v === 'deny')) return false;
     if (decisions.some(([, v]) => v === 'allow')) return true;
-    // Unknown: let sites try (we prompt in the request handler), except
-    // notifications, which would otherwise look pre-granted.
     return permission !== 'notifications';
   });
 
-  // Screen sharing (getDisplayMedia): ask, then share the primary screen.
   ses.setDisplayMediaRequestHandler(
     async (request, callback) => {
       const origin = originOf(request.securityOrigin || request.frame?.url || '');

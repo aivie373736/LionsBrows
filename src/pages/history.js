@@ -12,7 +12,7 @@ const list = document.getElementById('list');
 const more = document.getElementById('more');
 
 function emptyState(text) {
-  return el('div', { class: 'empty-state' }, el('img', { class: 'logo', src: 'lions://assets/logo.svg', alt: '' }), el('div', {}, text));
+  return el('div', { class: 'empty-state' }, el('div', { class: 'empty-icon', html: icon('history', 40) }), el('div', {}, text));
 }
 
 function item(v) {
@@ -28,7 +28,6 @@ function item(v) {
   );
   remove.onclick = async () => {
     await api.call('historyDelete', v.url);
-    // Every visit to that page is gone now.
     document.querySelectorAll('.list-item').forEach((r) => r.querySelector('a.title')?.getAttribute('href') === v.url && r.remove());
   };
   return row;

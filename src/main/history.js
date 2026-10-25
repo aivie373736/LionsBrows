@@ -1,8 +1,5 @@
 'use strict';
 
-// Browsing history in SQLite (Node's built-in node:sqlite, no native addon).
-// Ranking uses "frecency": visit count weighted by how recently it was visited.
-
 const { DatabaseSync } = require('node:sqlite');
 
 const DAY = 86_400_000;
@@ -61,7 +58,6 @@ class History {
     if (favicon && !this.closed) this.q.favicon.run(favicon, url);
   }
 
-  /** Frecency-ranked matches for the command bar. */
   search(text, limit = 8, now = Date.now()) {
     const words = text.trim().toLowerCase().split(/\s+/).filter(Boolean).slice(0, 6);
     if (!words.length || this.closed) return [];
@@ -79,7 +75,6 @@ class History {
       .map(plain);
   }
 
-  /** Most-visited pages for the new tab page. */
   topSites(limit = 8, now = Date.now()) {
     if (this.closed) return [];
     return this.db
@@ -91,12 +86,10 @@ class History {
       )
       .all(now, DAY, limit * 3)
       .map(plain)
-      // One tile per site: keep the best-ranked page of each host.
       .filter(uniqueBy((r) => safeHost(r.url)))
       .slice(0, limit);
   }
 
-  /** Visits, newest first, optionally filtered, for the History page. */
   visits({ query = '', limit = 100, offset = 0 } = {}) {
     if (this.closed) return [];
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean).slice(0, 6);
@@ -119,7 +112,6 @@ class History {
     if (!this.closed) this.q.deleteUrl.run(url);
   }
 
-  /** Delete visits newer than `since` (ms timestamp; 0 = everything). */
   clear(since = 0) {
     if (this.closed) return;
     if (!since) {
@@ -141,7 +133,7 @@ class History {
 
   close() {
     if (this.closed) return;
-    this.closed = true; // late calls from pages during shutdown become no-ops
+    this.closed = true;
     this.db.close();
   }
 }

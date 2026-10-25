@@ -1,13 +1,11 @@
 'use strict';
 
-// The API available to LionsBrows' own lions:// pages (new tab, settings,
-// history, bookmarks, downloads). Websites never get it: the preload only
-// exposes it on lions:// pages, and every call is checked again here.
-
 const fs = require('node:fs');
+const path = require('node:path');
 const { app, dialog, shell, session, webContents, nativeTheme } = require('electron');
-const { ctx, DEFAULT_SETTINGS, ACCENTS } = require('./context');
-const { ENGINES, BANGS } = require('./search-engines');
+const { ctx, DEFAULT_SETTINGS, ACCENTS, HEX } = require('./context');
+const searchEngines = require('./search-engines');
+const { backgroundsDir } = require('./protocol');
 const bookmarks = require('./bookmarks');
 const downloads = require('./downloads');
 const permissions = require('./permissions');
@@ -15,11 +13,50 @@ const extensions = require('./extensions');
 const adblock = require('./adblock');
 
 const ENUMS = {
-  searchEngine: Object.keys(ENGINES),
   startup: ['restore', 'newtab'],
   theme: ['system', 'light', 'dark'],
-  accent: Object.keys(ACCENTS),
+  layout: ['horizontal', 'vertical'],
+  ntBackground: ['default', 'color', 'image', 'video'],
 };
+
+const RANGES_NUM = {
+  tabSleepMinutes: [0, 1440],
+  ntBackgroundDim: [0, 0.9],
+  ntBackgroundBlur: [0, 40],
+};
+
+const BACKGROUND_TYPES = {
+  image: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif'],
+  video: ['mp4', 'webm', 'mov', 'm4v', 'ogv'],
+};
+
+function validate(key, value) {
+  if (!(key in DEFAULT_SETTINGS)) throw new Error('Unknown setting');
+  if (typeof value !== typeof DEFAULT_SETTINGS[key]) throw new Error('Wrong type');
+  if (ENUMS[key] && !ENUMS[key].includes(value)) throw new Error('Invalid value');
+  if (key === 'searchEngine' && !searchEngines.list().some((e) => e.id === value)) throw new Error('Unknown search engine');
+  if (RANGES_NUM[key] && !(value >= RANGES_NUM[key][0] && value <= RANGES_NUM[key][1])) throw new Error('Out of range');
+  if ((key === 'accent' || key === 'ntBackgroundColor') && !HEX.test(value)) throw new Error('Invalid color');
+  if (key === 'frameColor' && value !== '' && !HEX.test(value)) throw new Error('Invalid color');
+  if (key === 'ntBackgroundFile' && value !== '') throw new Error('Use chooseBackground');
+  if (key === 'customSearchUrl' && value !== '' && !searchEngines.isValidTemplate(value)) throw new Error('The address must start with http and contain %s');
+  if (key === 'greetingName' || key === 'customSearchName') return value.slice(0, 40);
+  return value;
+}
+
+function backgroundInfo() {
+  const s = ctx.settings();
+  const file = s.ntBackgroundFile;
+  const hasFile = file && fs.existsSync(path.join(backgroundsDir(), file));
+  const type = (s.ntBackground === 'image' || s.ntBackground === 'video') && !hasFile ? 'default' : s.ntBackground;
+  return {
+    type,
+    url: hasFile ? `lions://background/${encodeURIComponent(file)}` : '',
+    color: s.ntBackgroundColor,
+    dim: s.ntBackgroundDim,
+    blur: s.ntBackgroundBlur,
+  };
+}
 
 function findTab(wc) {
   for (const w of ctx.windows) for (const t of w.allTabs()) if (t.wc === wc) return { w, t };
@@ -53,21 +90,54 @@ const API = {
       dark: nativeTheme.shouldUseDarkColors,
       isPrivate: Boolean(findTab(sender).w?.isPrivate),
       settings: ctx.settings(),
-      engines: Object.entries(ENGINES).map(([id, e]) => ({ id, name: e.name })),
+      engines: searchEngines.list(),
       accents: ACCENTS,
       accent: ctx.accentColor(),
+      background: backgroundInfo(),
       downloadsDir: downloads.downloadsDir(),
     };
   },
 
   setSetting(_s, key, value) {
-    if (!(key in DEFAULT_SETTINGS)) throw new Error('Unknown setting');
-    if (typeof value !== typeof DEFAULT_SETTINGS[key]) throw new Error('Wrong type');
-    if (ENUMS[key] && !ENUMS[key].includes(value)) throw new Error('Invalid value');
-    if (key === 'tabSleepMinutes' && !(value >= 0 && value <= 1440)) throw new Error('Out of range');
-    if (key === 'greetingName') value = value.slice(0, 40);
-    ctx.setSetting(key, value);
+    ctx.setSetting(key, validate(key, value));
     return ctx.settings();
+  },
+
+  setSettings(_s, patch) {
+    const clean = {};
+    for (const [key, value] of Object.entries(patch || {})) clean[key] = validate(key, value);
+    ctx.setSettings(clean);
+    return ctx.settings();
+  },
+
+  async chooseBackground(sender, kind) {
+    if (!BACKGROUND_TYPES[kind]) throw new Error('Unknown background type');
+    const { w } = findTab(sender);
+    const { canceled, filePaths } = await dialog.showOpenDialog(w?.win, {
+      title: kind === 'video' ? 'Choose a video for the new tab page' : 'Choose an image for the new tab page',
+      filters: [{ name: kind === 'video' ? 'Videos' : 'Images', extensions: BACKGROUND_TYPES[kind] }],
+      properties: ['openFile'],
+    });
+    if (canceled || !filePaths[0]) return backgroundInfo();
+    return API.useBackgroundFile(sender, filePaths[0], kind);
+  },
+
+  async useBackgroundFile(_s, source, kind) {
+    const ext = path.extname(source).slice(1).toLowerCase();
+    if (!BACKGROUND_TYPES[kind] || !BACKGROUND_TYPES[kind].includes(ext)) throw new Error('Unsupported file type');
+    const dir = backgroundsDir();
+    await fs.promises.mkdir(dir, { recursive: true });
+    const name = `background-${Date.now()}.${ext}`;
+    await fs.promises.copyFile(source, path.join(dir, name));
+    for (const old of await fs.promises.readdir(dir)) if (old !== name) await fs.promises.rm(path.join(dir, old), { force: true });
+    ctx.setSettings({ ntBackground: kind, ntBackgroundFile: name });
+    return backgroundInfo();
+  },
+
+  async clearBackground() {
+    await fs.promises.rm(backgroundsDir(), { recursive: true, force: true });
+    ctx.setSettings({ ntBackground: 'default', ntBackgroundFile: '' });
+    return backgroundInfo();
   },
 
   async chooseDownloadsFolder(sender) {
@@ -93,7 +163,10 @@ const API = {
       topSites: ctx.settings().showTopSites && !isPrivate ? ctx.history.topSites(8) : [],
       blocked: ctx.config.get('stats').blocked,
       settings: ctx.settings(),
+      engines: searchEngines.list(),
+      accents: ACCENTS,
       accent: ctx.accentColor(),
+      background: backgroundInfo(),
     };
   },
 
@@ -199,7 +272,6 @@ const API = {
 
   makeDefaultBrowser() {
     if (process.platform === 'win32') {
-      // Windows 10/11 only lets the user pick the default browser in Settings.
       shell.openExternal('ms-settings:defaultapps');
       return 'settings';
     }
@@ -220,7 +292,7 @@ const API = {
   },
 
   bangs() {
-    return Object.entries(BANGS).map(([key, b]) => ({ key, name: b.name }));
+    return Object.entries(searchEngines.BANGS).map(([key, b]) => ({ key, name: b.name }));
   },
 };
 
@@ -232,7 +304,6 @@ async function call(event, method, ...args) {
   return fn(event.sender, ...args);
 }
 
-/** Push an event to every open lions:// page. */
 function broadcast(name, data) {
   for (const wc of webContents.getAllWebContents()) {
     if (!wc.isDestroyed() && wc.getURL().startsWith('lions://')) wc.send('lions:event', name, data);

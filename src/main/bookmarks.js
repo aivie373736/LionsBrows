@@ -54,7 +54,6 @@ function search(text, limit = 5) {
     .slice(0, limit);
 }
 
-/** Import bookmarks from a Netscape bookmark HTML file (exported by Chrome, Firefox, Edge...). */
 function importHtml(html) {
   const re = /<A\s+[^>]*HREF="([^"]+)"[^>]*>([^<]*)<\/A>/gi;
   let folder = '';

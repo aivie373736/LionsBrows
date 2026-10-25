@@ -1,7 +1,3 @@
-; Extra NSIS steps for the Windows installer (included by electron-builder).
-; Registers LionsBrows as a web browser so it appears in
-; Settings > Apps > Default apps, without taking over any links by itself.
-
 !define LB_CLIENT "Software\Clients\StartMenuInternet\LionsBrows"
 !define LB_EXE "$INSTDIR\${APP_EXECUTABLE_FILENAME}"
 
@@ -27,7 +23,6 @@
   WriteRegStr HKCU "Software\Classes\LionsBrowsHTML\DefaultIcon" "" "${LB_EXE},0"
   WriteRegStr HKCU "Software\Classes\LionsBrowsHTML\shell\open\command" "" '"${LB_EXE}" "%1"'
 
-  ; Let Windows know the list of browsers changed.
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 !macroend
 
