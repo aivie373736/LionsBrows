@@ -31,6 +31,7 @@ class Tab {
     this.blocked = 0;
     this.errorUrl = null;
     this.readerable = false;
+    this.navigations = 0;
     this.typed = false;
     this.lastActive = Date.now();
     this.savedHistory = null;
@@ -126,6 +127,7 @@ class Tab {
       this.#syncBackground(event.url);
       this.blocked = 0;
       this.readerable = false;
+      this.navigations++;
     });
     wc.on('did-finish-load', () => this.#checkReader(wc));
     wc.on('did-navigate', (_e, url) => {
@@ -194,10 +196,16 @@ class Tab {
     });
   }
 
-  async #checkReader(wc) {
+  async #checkReader(wc, retry = true) {
     if (wc !== this.wc) return;
+    const navigation = this.navigations;
     const readerable = await reader.check(this);
-    if (wc !== this.wc || readerable === this.readerable) return;
+    if (wc !== this.wc || navigation !== this.navigations) return;
+    if (!readerable && retry) {
+      setTimeout(() => this.#checkReader(wc, false), 1500);
+      return;
+    }
+    if (readerable === this.readerable) return;
     this.readerable = readerable;
     this.owner.tabChanged(this);
   }

@@ -277,7 +277,10 @@ await step('memory saver keeps only a few background tabs awake', async () => {
 
 await step('reader view shows a clean, safe version of articles', async () => {
   await main((ctx, r, w, url) => w.openUrl(url), `${BASE}/article`);
-  await until(() => main((ctx, r, w) => w.activeTab().readerable), 'article is readerable');
+  await until(() => main((ctx, r, w) => w.activeTab().readerable), 'article is readerable').catch(async (err) => {
+    const info = await main(async (ctx, r, w) => ({ url: w.activeTab().wc.getURL(), loading: w.activeTab().wc.isLoading(), direct: await r('./reader').check(w.activeTab()) }));
+    throw new Error(`${err.message} ${JSON.stringify(info)}`);
+  });
   const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
   await until(() => ui.$eval('#addr-reader', (e) => !e.hidden), 'reader button shown');
   await main((ctx, r, w) => r('./actions').run('reader', w));
