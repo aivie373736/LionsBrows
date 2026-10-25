@@ -136,7 +136,7 @@ async function load() {
     document.head.append(link);
   }
   const site = document.getElementById('site');
-  site.textContent = article.siteName || hostOf(article.url);
+  site.textContent = hostOf(article.url);
   site.href = safeUrl(article.url, false) || '#';
   document.getElementById('title').textContent = article.title || '';
   const minutes = Math.max(1, Math.round((article.length || 0) / 1200));

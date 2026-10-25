@@ -9,6 +9,7 @@ const PREFIX = 'lions://reader/';
 const LIB = path.dirname(require.resolve('@mozilla/readability/package.json'));
 const sources = {};
 const articles = new Map();
+const CLUTTER = ['.infobox', '.navbox', '.vertical-navbox', '.sidebar', '.metadata', '.ambox', '.hatnote', '.mw-editsection', '.noprint', '.reference', '.shortdescription', '#toc', '.toc'].join(', ');
 
 function source(file) {
   if (!sources[file]) sources[file] = fs.readFileSync(path.join(LIB, file), 'utf8');
@@ -43,7 +44,9 @@ async function open(tab) {
   if (!/^https?:/i.test(url)) return false;
   const code = `${source('Readability.js')}
 ;(() => {
-  const a = new Readability(document.cloneNode(true), { charThreshold: 300 }).parse();
+  const doc = document.cloneNode(true);
+  doc.querySelectorAll(${JSON.stringify(CLUTTER)}).forEach((node) => node.remove());
+  const a = new Readability(doc, { charThreshold: 300 }).parse();
   return a && { title: a.title, byline: a.byline, siteName: a.siteName, content: a.content, length: a.length, lang: a.lang, dir: a.dir, publishedTime: a.publishedTime };
 })()`;
   let article = null;
