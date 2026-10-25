@@ -251,6 +251,22 @@ await step('background tabs can sleep and wake up where they were', async () => 
   await until(() => main((ctx, r, w, tid) => !w.tabById(tid).sleeping && w.tabById(tid).wc.getURL().endsWith('/'), id), 'woke up');
 });
 
+await step('memory saver keeps only a few background tabs awake', async () => {
+  await main((ctx) => ctx.setSetting('memorySaver', 'maximum'));
+  for (let i = 0; i < 6; i++) await main((ctx, r, w, url) => void w.newTab({ url, background: true }), `${BASE}/two?bg=${i}`);
+  await wait(600);
+  await main((ctx, r) => r('./memory').enforce());
+  const awake = await main((ctx, r, w) => {
+    const visible = w.visibleTabs();
+    return w.allTabs().filter((t) => t.view && !visible.includes(t)).length;
+  });
+  assert.ok(awake <= 3, `awake background tabs: ${awake}`);
+  const report = await main((ctx, r) => r('./memory').report());
+  assert.ok(report.total > 0, 'memory total reported');
+  assert.ok(report.tabs.some((t) => t.sleeping), 'some tabs asleep');
+  await main((ctx) => ctx.setSetting('memorySaver', 'auto'));
+});
+
 await step('bookmarks', async () => {
   await main((ctx, r) => r('./actions').run('bookmark', ctx.lastFocusedWindow()));
   assert.equal(await main((ctx, r, w) => r('./bookmarks').has(w.activeTab().displayUrl)), true);
@@ -369,6 +385,7 @@ await step('settings and history pages render', async () => {
   await main((ctx, r, w) => r('./actions').run('settings', w));
   const settings = await pageFor(app, (u) => u.startsWith('lions://settings'));
   await settings.waitForSelector('#privacy');
+  await settings.waitForSelector('#performance .mem-value');
   await wait(400);
   shot('13-settings');
 });

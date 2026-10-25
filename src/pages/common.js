@@ -98,3 +98,40 @@ function debounce(fn, ms) {
     t = setTimeout(() => fn(...args), ms);
   };
 }
+
+const LIBRARY = [
+  ['history', 'History', 'history'],
+  ['bookmarks', 'Bookmarks', 'bookmark'],
+  ['downloads', 'Downloads', 'download'],
+];
+
+function libraryShell(active, placeholder) {
+  const nav = document.getElementById('nav');
+  nav.append(el('div', { class: 'brand' }, el('img', { src: 'lions://assets/logo.svg', alt: '' }), 'Library'));
+  for (const [id, title, iconName] of LIBRARY) {
+    const a = el('a', { href: `lions://${id}/`, class: id === active ? 'active' : null, html: icon(iconName, 20) });
+    a.append(el('span', {}, title));
+    nav.append(a);
+  }
+  nav.append(el('div', { class: 'nav-sep' }));
+  const settings = el('a', { href: 'lions://settings/', html: icon('settings', 20) });
+  settings.append(el('span', {}, 'Settings'));
+  nav.append(settings);
+
+  const [, title, iconName] = LIBRARY.find(([id]) => id === active);
+  const heading = document.getElementById('page-title');
+  heading.innerHTML = icon(iconName, 26);
+  heading.append(title);
+  document.getElementById('search-icon').innerHTML = icon('search', 20);
+  const search = document.getElementById('page-search');
+  search.placeholder = placeholder;
+  return search;
+}
+
+function libraryPanel(title, ...children) {
+  return el('div', { class: 'panel' }, title ? el('h3', { class: 'panel-title' }, title) : null, ...children);
+}
+
+function emptyPanel(iconName, text) {
+  return libraryPanel(null, el('div', { class: 'empty-state' }, el('div', { class: 'empty-icon', html: icon(iconName, 40) }), el('div', {}, text)));
+}

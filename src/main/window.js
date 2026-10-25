@@ -246,6 +246,7 @@ class BrowserWin {
       if (!adopt) tab.ensureView();
       tab.view.setBounds(this.lastArea);
       this.scheduleState();
+      require('./memory').schedule();
     } else {
       this.activate(tab.id);
     }
@@ -270,6 +271,7 @@ class BrowserWin {
     if (!this.overlayOpen) this.focusActive();
     this.scheduleState();
     this.scheduleSave();
+    require('./memory').schedule();
   }
 
   focusActive() {

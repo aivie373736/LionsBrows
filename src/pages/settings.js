@@ -5,7 +5,7 @@ const SECTIONS = [
   ['appearance', 'Appearance', 'palette'],
   ['newtab', 'New tab page', 'image'],
   ['search', 'Search', 'search'],
-  ['tabs', 'Tabs and memory', 'layers'],
+  ['performance', 'Performance', 'zap'],
   ['privacy', 'Privacy and security', 'lock'],
   ['downloads', 'Downloads', 'download'],
   ['extensions', 'Extensions', 'puzzle'],
@@ -45,13 +45,14 @@ function select(key, options, transform = (v) => v) {
   return s;
 }
 
-function segmented(key, options) {
+function segmented(key, options, onChange) {
   const box = el('div', { class: 'seg' });
   for (const [value, label] of options) {
     const b = el('button', { class: S.settings[key] === value ? 'on' : '' }, label);
     b.onclick = async () => {
       await set(key, value);
       box.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+      onChange?.(value);
     };
     box.append(b);
   }
@@ -322,31 +323,89 @@ async function search() {
   );
 }
 
-function tabs() {
+async function performance() {
+  let report = await api.call('memoryReport');
+  const saverSummary = el('div', { class: 'sub' }, report.summary);
+  const restartNote = el('div', { class: 'row restart-row' }, el('div', { class: 'label' }, el('div', {}, 'Restart to apply'), el('div', { class: 'sub' }, 'Low-memory mode changes take effect after a restart.')));
+  const restartBtn = el('button', { class: 'button primary' }, 'Restart now');
+  restartBtn.onclick = () => api.call('relaunch');
+  restartNote.append(restartBtn);
+  const updateRestart = () => {
+    const mode = S.settings.lowEndMode;
+    const wanted = mode === 'on' || (mode === 'auto' && report.lowEndDevice);
+    restartNote.hidden = wanted === report.lowEndModeActive;
+  };
+
+  const usedValue = el('div', { class: 'mem-value' });
+  const systemText = el('div', { class: 'sub' });
+  const bar = el('div', { class: 'mem-bar' }, el('span'));
+  const tabList = el('div', { class: 'mini-list' });
+  const sleepAll = el('button', { class: 'button' }, 'Sleep background tabs');
+  sleepAll.onclick = async () => {
+    const n = await api.call('memorySleepAll');
+    toast(n ? `${n} tab${n === 1 ? '' : 's'} put to sleep` : 'No background tabs to put to sleep');
+    refresh();
+  };
+
+  const paint = () => {
+    usedValue.textContent = formatBytes(report.total);
+    const used = report.system.total - report.system.free;
+    systemText.textContent = `${formatBytes(report.system.free)} free of ${formatBytes(report.system.total)} system memory${report.lowEndModeActive ? ' · Low-memory mode on' : ''}`;
+    bar.firstChild.style.width = `${Math.min(100, Math.round((used / report.system.total) * 100))}%`;
+    tabList.replaceChildren(
+      ...report.tabs.slice(0, 30).map((t) => {
+        const state = t.sleeping
+          ? el('span', { class: 'pill-tag' }, 'Sleeping')
+          : t.visible
+            ? el('span', { class: 'pill-tag' }, 'Active')
+            : el('button', { class: 'button small', onclick: async () => (await api.call('memorySleepTab', t.id), refresh()) }, 'Sleep');
+        return el(
+          'div',
+          { class: 'list-item' },
+          faviconEl(t.favicon),
+          el('span', { class: 'host' }, t.isPrivate ? `${t.title} (private)` : t.title),
+          el('span', { class: 'mem-size' }, t.sleeping ? '—' : `${formatBytes(t.memory)}${t.shared ? '*' : ''}`),
+          state,
+        );
+      }),
+    );
+  };
+  const refresh = async () => {
+    report = await api.call('memoryReport');
+    saverSummary.textContent = report.summary;
+    paint();
+  };
+  paint();
+  updateRestart();
+  setInterval(() => document.visibilityState === 'visible' && refresh(), 4000);
+
   return section(
-    'tabs',
+    'performance',
     null,
     panel(
       'Memory saver',
       'zap',
       card(
-        row(
-          'Put inactive tabs to sleep',
-          'Sleeping tabs free up memory and reload when you open them. Tabs playing audio stay active.',
-          select(
-            'tabSleepMinutes',
-            [
-              [0, 'Never'],
-              [5, 'After 5 minutes'],
-              [15, 'After 15 minutes'],
-              [30, 'After 30 minutes'],
-              [60, 'After 1 hour'],
-              [180, 'After 3 hours'],
-            ],
-            Number,
-          ),
+        el(
+          'div',
+          { class: 'row' },
+          el('div', { class: 'label' }, el('div', {}, 'Put inactive tabs to sleep'), saverSummary),
+          segmented('memorySaver', [['auto', 'Auto'], ['balanced', 'Balanced'], ['maximum', 'Maximum'], ['off', 'Off']], refresh),
         ),
+        row(
+          'Low-memory mode',
+          'Uses Chromium’s low-end device mode and fewer processes. Auto turns it on for devices with 4 GB of RAM or less.',
+          segmented('lowEndMode', [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']], updateRestart),
+        ),
+        restartNote,
       ),
+    ),
+    panel(
+      'Memory usage',
+      'monitor',
+      card(el('div', { class: 'row mem-row' }, el('div', { class: 'label' }, usedValue, el('div', { class: 'sub' }, 'used by LionsBrows'), bar, systemText), sleepAll)),
+      el('p', { class: 'group-label' }, 'Tabs (* shares a process with other tabs from the same site)'),
+      card(tabList),
     ),
   );
 }
@@ -566,7 +625,7 @@ async function build() {
     nav.append(a);
   }
 
-  const parts = await Promise.all([general(), appearance(), newtabSection(), search(), tabs(), privacy(), downloads(), extensions(), shortcuts(), about()]);
+  const parts = await Promise.all([general(), appearance(), newtabSection(), search(), performance(), privacy(), downloads(), extensions(), shortcuts(), about()]);
   document.getElementById('sections').append(...parts);
   setupSearch();
 

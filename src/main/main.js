@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { app, nativeTheme } = require('electron');
@@ -21,7 +22,24 @@ process.on('warning', (w) => {
 const protocol = require('./protocol');
 protocol.registerScheme();
 
+function savedSettings() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'config.json'), 'utf8')).settings || {};
+  } catch {
+    return {};
+  }
+}
+
+const lowEndSetting = savedSettings().lowEndMode || 'auto';
+const lowEndMode = lowEndSetting === 'on' || (lowEndSetting === 'auto' && os.totalmem() <= 4 * 1024 ** 3);
+if (lowEndMode) {
+  app.commandLine.appendSwitch('enable-low-end-device-mode');
+  app.commandLine.appendSwitch('renderer-process-limit', '4');
+  app.commandLine.appendSwitch('process-per-site');
+}
+
 const { ctx } = require('./context');
+ctx.lowEndModeActive = lowEndMode;
 
 if (process.env.LIONSBROWS_TEST === '1') global.lionsTest = { ctx, require };
 
@@ -66,18 +84,6 @@ function findTabByWebContentsId(id) {
   return null;
 }
 
-function sleepIdleTabs() {
-  const minutes = ctx.settings().tabSleepMinutes;
-  if (!minutes) return;
-  const cutoff = Date.now() - minutes * 60_000;
-  for (const w of ctx.windows) {
-    const visible = new Set(w.visibleTabs());
-    for (const t of w.allTabs()) {
-      if (!visible.has(t) && t.view && !t.audible && !t.loading && t.lastActive < cutoff) t.sleep();
-    }
-  }
-}
-
 async function start() {
   ctx.init();
   const downloads = require('./downloads');
@@ -102,7 +108,7 @@ async function start() {
     new BrowserWin({ urls: pendingUrls });
   }
 
-  setInterval(sleepIdleTabs, 60_000);
+  require('./memory').start();
 
   nativeTheme.on('updated', () => {
     for (const w of ctx.windows) w.applyTheme();
@@ -110,6 +116,7 @@ async function start() {
   });
 
   ctx.events.on('settings-changed', (key) => {
+    if (key === 'memorySaver') require('./memory').enforce();
     for (const w of ctx.windows) {
       if (key === 'theme' || key === 'frameColor' || key === 'layout') w.applyTheme();
       else if (key === 'sidebarCollapsed' || key === 'showBookmarksBar') w.layout();

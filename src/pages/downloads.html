@@ -7,17 +7,23 @@
     <link rel="icon" href="lions://assets/logo.svg" />
     <link rel="stylesheet" href="lions://assets/theme.css" />
     <link rel="stylesheet" href="common.css" />
+    <link rel="stylesheet" href="shell.css" />
   </head>
   <body>
-    <div class="page">
-      <header class="page-head">
-        <h1>Downloads</h1>
-        <div class="spacer"></div>
-        <div id="actions" style="display: flex; gap: 8px"></div>
-      </header>
-      <div id="search-box"></div>
-      <div id="list"></div>
-      <div id="more"></div>
+    <div class="layout">
+      <nav id="nav" aria-label="Library"></nav>
+      <main>
+        <div class="settings-search">
+          <span class="search-icon" id="search-icon"></span>
+          <input id="page-search" type="search" autocomplete="off" spellcheck="false" autofocus />
+        </div>
+        <div class="title-row">
+          <h2 class="section-title" id="page-title"></h2>
+          <div class="actions" id="actions"></div>
+        </div>
+        <div id="list"></div>
+        <div id="more"></div>
+      </main>
     </div>
     <script src="lions://assets/icons.js"></script>
     <script src="common.js"></script>

@@ -16,11 +16,12 @@ const ENUMS = {
   startup: ['restore', 'newtab'],
   theme: ['system', 'light', 'dark'],
   layout: ['horizontal', 'vertical'],
+  memorySaver: ['auto', 'balanced', 'maximum', 'off'],
+  lowEndMode: ['auto', 'on', 'off'],
   ntBackground: ['default', 'color', 'image', 'video'],
 };
 
 const RANGES_NUM = {
-  tabSleepMinutes: [0, 1440],
   ntBackgroundDim: [0, 0.9],
   ntBackgroundBlur: [0, 40],
 };
@@ -282,6 +283,20 @@ const API = {
 
   openDataFolder() {
     shell.openPath(app.getPath('userData'));
+  },
+
+  memoryReport() {
+    return require('./memory').report();
+  },
+  memorySleepTab(_s, id) {
+    return require('./memory').sleepTab(Number(id));
+  },
+  memorySleepAll() {
+    return require('./memory').sleepAllBackground();
+  },
+  relaunch() {
+    app.relaunch();
+    app.quit();
   },
 
   shortcuts() {

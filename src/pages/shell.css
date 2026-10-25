@@ -452,3 +452,53 @@ input[type='checkbox'] {
     padding: 28px 20px 80px;
   }
 }
+
+.row .label > div.mem-value {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.mem-bar {
+  height: 8px;
+  margin: 14px 0 8px;
+  border-radius: 999px;
+  background: var(--bg-active);
+  overflow: hidden;
+  max-width: 420px;
+}
+.mem-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s;
+}
+.mem-size {
+  width: 84px;
+  text-align: right;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.button.small {
+  height: 30px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+.restart-row {
+  background: var(--accent-soft);
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.title-row .actions {
+  display: flex;
+  gap: 10px;
+}
+.panel .empty-state {
+  padding: 40px 20px;
+}

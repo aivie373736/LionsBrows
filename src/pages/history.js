@@ -6,17 +6,15 @@ let offset = 0;
 let done = false;
 let loading = false;
 let lastDay = null;
+let lastUrl = null;
 let dayCard = null;
 
 const list = document.getElementById('list');
 const more = document.getElementById('more');
-
-function emptyState(text) {
-  return el('div', { class: 'empty-state' }, el('div', { class: 'empty-icon', html: icon('history', 40) }), el('div', {}, text));
-}
+const search = libraryShell('history', 'Search history');
 
 function item(v) {
-  const remove = el('button', { class: 'icon-btn', title: 'Remove from history', html: icon('x', 15) });
+  const remove = el('button', { class: 'icon-btn', title: 'Remove from history', 'aria-label': 'Remove from history', html: icon('x', 16) });
   const row = el(
     'div',
     { class: 'list-item' },
@@ -40,6 +38,7 @@ async function load(reset = false) {
     offset = 0;
     done = false;
     lastDay = null;
+    lastUrl = null;
     list.textContent = '';
   }
   const visits = await api.call('historyList', { query, limit: PAGE, offset });
@@ -49,31 +48,34 @@ async function load(reset = false) {
     const day = dayLabel(v.time);
     if (day !== lastDay) {
       lastDay = day;
-      list.append(el('div', { class: 'day' }, day));
+      lastUrl = null;
       dayCard = el('div', { class: 'card' });
-      list.append(dayCard);
+      list.append(libraryPanel(day, dayCard));
     }
+    if (v.url === lastUrl) continue;
+    lastUrl = v.url;
     dayCard.append(item(v));
   }
-  if (!list.children.length) list.append(emptyState(query ? `Nothing in your history matches “${query}”.` : 'Pages you visit will show up here.'));
+  if (!list.children.length) list.append(emptyPanel('history', query ? `No history matches “${query}”.` : 'Pages you visit will appear here.'));
   loading = false;
 }
 
-const search = el('input', { type: 'search', class: 'search-input', placeholder: 'Search history', autofocus: true });
-search.addEventListener('input', debounce(() => {
-  query = search.value.trim();
-  load(true);
-}, 200));
-document.getElementById('search-box').append(search);
+search.addEventListener(
+  'input',
+  debounce(() => {
+    query = search.value.trim();
+    load(true);
+  }, 200),
+);
 
 const range = el(
   'select',
-  { title: 'Clear history' },
+  { title: 'Clear history', 'aria-label': 'Clear history' },
   el('option', { value: '' }, 'Clear history…'),
   el('option', { value: 'hour' }, 'Last hour'),
   el('option', { value: 'day' }, 'Last 24 hours'),
   el('option', { value: 'week' }, 'Last 7 days'),
-  el('option', { value: 'all' }, 'Everything'),
+  el('option', { value: 'all' }, 'All time'),
 );
 range.addEventListener('change', async () => {
   if (!range.value) return;

@@ -4,7 +4,7 @@
 
 <h1 align="center">LionsBrows</h1>
 
-<p align="center">A fast, private web browser built on Chromium.</p>
+<p align="center">A fast, private web browser built on Chromium that runs well on low-memory devices.</p>
 
 <p align="center">
   <img src="docs/screenshots/new-tab.png" width="860" alt="LionsBrows new tab page">
@@ -18,19 +18,30 @@
 - **Command bar:** press <kbd>Ctrl</kbd>+<kbd>K</kbd> to search open tabs, bookmarks, history and commands. It also does calculations and supports site shortcuts such as `!yt` and `!w`.
 - **Search engine choice:** pick Google, DuckDuckGo, Bing, Brave Search, Ecosia, Startpage, Qwant, Yahoo or a custom engine, right from the new tab page.
 - **Personalization:** use your own video, image or a solid color as the new tab background. You can also choose the accent color and toolbar color, and switch between light and dark mode.
+- **Made for low-memory devices:** Memory saver puts inactive tabs to sleep and limits how many background tabs stay active. Low-memory mode uses fewer processes and smaller caches. Both turn on automatically on devices with 4 GB of RAM or less, and when the system runs low on memory, background tabs are suspended immediately. Settings shows memory usage per tab.
 - **Tracking protection:** built-in ad and tracker blocking with per-site exceptions, automatic HTTPS upgrades, Global Privacy Control and private windows.
 - **Everyday tools:** history, bookmarks with import and export, a download manager, find in page, zoom, full-page screenshots, a PDF viewer, spell check, session restore and a notes panel.
 
 <p align="center">
   <img src="docs/screenshots/settings-dark.png" width="430" alt="Settings in dark mode">
+  <img src="docs/screenshots/performance.png" width="430" alt="Performance settings with memory usage">
   <img src="docs/screenshots/video-background.png" width="430" alt="Video background and customize panel">
   <img src="docs/screenshots/search-engines.png" width="430" alt="Search engine picker">
   <img src="docs/screenshots/vertical-tabs.png" width="430" alt="Vertical tabs with a custom toolbar color">
+  <img src="docs/screenshots/history.png" width="430" alt="History">
 </p>
 
 ## Download
 
-Installers for Windows, macOS and Linux are built by GitHub Actions on every push.
+Installers are built by GitHub Actions on every push:
+
+| System | Download |
+|---|---|
+| Windows 10/11 (Intel/AMD) | `LionsBrows-<version>-win-x64.exe` |
+| Windows 11 on ARM | `LionsBrows-<version>-win-arm64.exe` |
+| macOS (Apple silicon / Intel) | `LionsBrows-<version>-mac-arm64.dmg` / `-mac-x64.dmg` |
+| Linux (x64) | `LionsBrows-<version>-linux-x86_64.AppImage` |
+| Linux on ARM (e.g. Raspberry Pi 4/5, 64-bit OS) | `LionsBrows-<version>-linux-arm64.AppImage` |
 
 - Tagged versions are published on the [Releases](../../releases) page.
 - The latest build is available from the [Actions](../../actions) tab: open the most recent successful run and download the artifact for your system.

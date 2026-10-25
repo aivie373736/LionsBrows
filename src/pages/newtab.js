@@ -280,6 +280,13 @@ $('customize-close').innerHTML = icon('x', 18);
 $('customize-close').onclick = () => ($('customize').hidden = true);
 $('go').innerHTML = icon('search', 18);
 
+document.addEventListener('visibilitychange', () => {
+  const video = document.querySelector('#bg video');
+  if (!video) return;
+  if (document.hidden) video.pause();
+  else video.play().catch(() => {});
+});
+
 $('search-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const q = $('search').value.trim();
