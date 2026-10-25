@@ -455,14 +455,14 @@ function flushNotes() {
   if (notesTimer) {
     clearTimeout(notesTimer);
     notesTimer = null;
-    cmd('setNotes', notes.value);
+    cmd('setNotes', notesFor, notes.value);
   }
 }
 notes.addEventListener('input', () => {
   clearTimeout(notesTimer);
   notesTimer = setTimeout(() => {
     notesTimer = null;
-    cmd('setNotes', notes.value);
+    cmd('setNotes', notesFor, notes.value);
   }, 400);
 });
 

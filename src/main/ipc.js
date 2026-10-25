@@ -13,8 +13,10 @@ const { run, openInternal } = require('./actions');
 
 const privateNotes = new Map();
 
-function notesKey(w) {
-  return w.activeWorkspaceId;
+// Notes belong to a workspace; the UI says which one so that a save still in
+// flight while switching workspaces lands in the right notepad.
+function notesKey(w, wsId) {
+  return wsId && ctx.workspaces().some((x) => x.id === wsId) ? wsId : w.activeWorkspaceId;
 }
 
 const UI = {
@@ -49,10 +51,10 @@ const UI = {
   closeFind: (w) => w.closeFind(),
   zoomReset: (w) => w.activeTab()?.zoom(0),
   getNotes: (w) => (w.isPrivate ? privateNotes.get(w.privateId) : ctx.notes.get(notesKey(w))) || '',
-  setNotes: (w, text) => {
+  setNotes: (w, wsId, text) => {
     const value = String(text).slice(0, 200_000);
     if (w.isPrivate) privateNotes.set(w.privateId, value);
-    else ctx.notes.set(notesKey(w), value);
+    else ctx.notes.set(notesKey(w, wsId), value);
   },
   download: (w, id, action) => downloads.action(id, action),
   openDownloadsPage: (w) => openInternal(w, 'downloads'),

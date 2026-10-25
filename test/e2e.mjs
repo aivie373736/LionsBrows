@@ -160,7 +160,7 @@ await step('navigates, records history and shows the address', async () => {
 await step('ad blocker blocks known ad/tracker scripts', async () => {
   // Filter lists download on first start (a few MB); wait for them, then reload.
   await until(() => main((ctx, r) => r('./adblock').isReady()), 'filter lists', 90000);
-  await main((ctx, r, w) => w.activeTab().reload());
+  await main((ctx, r, w) => w.activeTab().reload(true)); // bypass the cache
   const blocked = await until(() => main((ctx, r, w) => w.activeTab().blocked), 'blocked count > 0', 30000);
   assert.ok(blocked >= 1);
   shot('02-page');
@@ -277,6 +277,23 @@ await step('workspaces keep their own tabs', async () => {
   shot('06-workspace');
   await main((ctx, r, w) => w.switchWorkspace('home'));
   assert.ok((await main((ctx, r, w) => w.space().tabs.length)) >= 4);
+});
+
+await step('notes are saved to the workspace they were written in', async () => {
+  await main((ctx, r, w) => w.togglePanel('notes'));
+  const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
+  await ui.waitForSelector('#panel-notes:not([hidden]) #notes');
+  await wait(200);
+  await ui.fill('#notes', 'roar notes');
+  // Switch right away, before the autosave timer fires.
+  const other = await main((ctx) => ctx.workspaces().find((x) => x.id !== 'home').id);
+  await main((ctx, r, w, id) => w.switchWorkspace(id), other);
+  await until(() => main((ctx) => ctx.notes.get('home') === 'roar notes'), 'notes saved to Home');
+  assert.notEqual(await main((ctx, r, w, id) => ctx.notes.get(id) || '', other), 'roar notes');
+  await main((ctx, r, w) => {
+    w.switchWorkspace('home');
+    w.togglePanel('notes');
+  });
 });
 
 await step('downloads save to the downloads folder', async () => {

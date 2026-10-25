@@ -121,12 +121,15 @@ class Tab {
       changed();
     });
     wc.on('did-start-navigation', (event) => {
-      if (event.isMainFrame && !event.isSameDocument) this.#syncBackground(event.url);
+      if (!event.isMainFrame || event.isSameDocument) return;
+      this.#syncBackground(event.url);
+      // Reset here, not on commit: the new page's first blocked requests can
+      // arrive before the commit event does.
+      this.blocked = 0;
     });
     wc.on('did-navigate', (_e, url) => {
       this.url = url;
       this.crashed = false;
-      this.blocked = 0;
       if (!url.startsWith('lions://error')) this.errorUrl = null;
       this.#record(url);
       changed();
