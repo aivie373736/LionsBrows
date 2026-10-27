@@ -40,6 +40,16 @@ function describe(permission, details) {
   return DESCRIPTIONS[permission] ? tr(DESCRIPTIONS[permission]) : tr('use “{name}”', { name: permission });
 }
 
+const DEFAULT_SETTING = { geolocation: 'defaultLocation', notifications: 'defaultNotifications' };
+
+function blockedByDefault(permission, mediaTypes = []) {
+  const s = ctx.settings();
+  if (permission === 'media') {
+    return (mediaTypes.includes('video') && s.defaultCamera === 'block') || (mediaTypes.includes('audio') && s.defaultMicrophone === 'block');
+  }
+  return DEFAULT_SETTING[permission] ? s[DEFAULT_SETTING[permission]] === 'block' : false;
+}
+
 function keyFor(permission, details) {
   return permission === 'media' ? `media:${[...(details.mediaTypes || [])].sort().join('+')}` : permission;
 }
@@ -94,6 +104,7 @@ function attach(ses, { isPrivate }) {
     const key = keyFor(permission, details);
     const stored = lookup(isPrivate, origin, key);
     if (stored) return callback(stored === 'allow');
+    if (blockedByDefault(permission, details.mediaTypes)) return callback(false);
 
     const id = `${origin}|${key}`;
     if (!pending.has(id)) pending.set(id, prompt(wc, origin, describe(permission, details)).finally(() => pending.delete(id)));
@@ -106,7 +117,7 @@ function attach(ses, { isPrivate }) {
     }
   });
 
-  ses.setPermissionCheckHandler((_wc, permission, requestingOrigin) => {
+  ses.setPermissionCheckHandler((_wc, permission, requestingOrigin, details = {}) => {
     if (ALWAYS_ALLOW.has(permission)) return true;
     const origin = originOf(requestingOrigin);
     if (origin.startsWith('lions:')) return true;
@@ -114,6 +125,7 @@ function attach(ses, { isPrivate }) {
     const decisions = perms ? Object.entries(perms).filter(([k]) => k === permission || k.startsWith(`${permission}:`)) : [];
     if (decisions.some(([, v]) => v === 'deny')) return false;
     if (decisions.some(([, v]) => v === 'allow')) return true;
+    if (blockedByDefault(permission, details.mediaType ? [details.mediaType] : [])) return false;
     return permission !== 'notifications';
   });
 

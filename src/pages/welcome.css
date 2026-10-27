@@ -1,0 +1,137 @@
+body {
+  min-height: 100vh;
+  display: grid;
+  place-items: start center;
+}
+
+.wizard {
+  width: min(680px, 100% - 32px);
+  padding: 48px 0 40px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 36px;
+}
+.dots li {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  transition: width 0.2s, background 0.2s;
+}
+.dots li.on {
+  width: 24px;
+  background: var(--accent);
+}
+.dots li.done {
+  background: var(--accent);
+  opacity: 0.45;
+}
+
+.step {
+  flex: 1;
+  animation: step-in 0.2s ease-out;
+}
+.step h1 {
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  text-align: center;
+}
+.step .lead {
+  text-align: center;
+  color: var(--text-2);
+  max-width: 34em;
+  margin: 0 auto 28px;
+  line-height: 1.5;
+}
+.hero-logo {
+  display: block;
+  margin: 8px auto 20px;
+}
+
+.presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.preset {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.preset b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+}
+.preset span {
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+.preset:hover {
+  border-color: var(--accent);
+}
+.preset.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: var(--accent-soft);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.nav .grow {
+  flex: 1;
+}
+.link {
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.link:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (max-width: 560px) {
+  .presets {
+    grid-template-columns: 1fr;
+  }
+}

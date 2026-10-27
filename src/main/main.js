@@ -105,7 +105,15 @@ async function start() {
   sessions.init();
   menus.installAppMenu();
   ipc.init();
+  if (ctx.settings().cookies === 'session' && !ctx.config.get('siteDataCleared')) await sessions.clearSiteData();
+  if (ctx.config.get('siteDataCleared')) ctx.config.set('siteDataCleared', false);
+
   const saved = sessionStore.saved();
+  const welcome = !ctx.settings().welcomeDone && (process.env.LIONSBROWS_TEST !== '1' || process.env.LIONSBROWS_WELCOME === '1');
+  if (welcome) {
+    pendingUrls.push('lions://welcome/');
+    ctx.setSetting('welcomeDone', true);
+  }
   if (saved.length) {
     saved.forEach((restore, i) => new BrowserWin({ restore, urls: i === 0 ? pendingUrls : [] }));
   } else {
@@ -163,7 +171,17 @@ async function start() {
     internalApi.broadcast('bookmarks-changed');
   });
 
-  app.on('before-quit', () => {
+  let siteDataPending = true;
+  app.on('before-quit', (event) => {
+    if (siteDataPending && ctx.settings().cookies === 'session') {
+      siteDataPending = false;
+      event.preventDefault();
+      sessions
+        .clearSiteData()
+        .then(() => ctx.config.set('siteDataCleared', true))
+        .finally(() => app.quit());
+      return;
+    }
     ctx.quitting = true;
     sessionStore.saveNow();
     downloads.flush();

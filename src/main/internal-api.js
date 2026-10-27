@@ -22,6 +22,11 @@ const ENUMS = {
   ntBackground: ['default', 'color', 'image', 'video'],
   downloadsButton: ['auto', 'always'],
   language: ['auto', 'en', 'de'],
+  cookies: ['keep', 'session'],
+  defaultCamera: ['ask', 'block'],
+  defaultMicrophone: ['ask', 'block'],
+  defaultLocation: ['ask', 'block'],
+  defaultNotifications: ['ask', 'block'],
   readerFont: ['serif', 'sans'],
   readerTheme: ['auto', 'light', 'sepia', 'dark'],
 };

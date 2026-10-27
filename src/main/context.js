@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS = {
   searchSuggestions: true,
   customSearchName: '',
   customSearchUrl: '',
+  welcomeDone: false,
   startup: 'restore',
   blockAutoplay: true,
   language: 'auto',
@@ -29,6 +30,12 @@ const DEFAULT_SETTINGS = {
   adblock: true,
   httpsUpgrade: true,
   gpc: true,
+  cookies: 'keep',
+  blockThirdPartyCookies: false,
+  defaultCamera: 'ask',
+  defaultMicrophone: 'ask',
+  defaultLocation: 'ask',
+  defaultNotifications: 'ask',
   memorySaver: 'auto',
   lowEndMode: 'auto',
   askWhereToSave: false,
@@ -106,6 +113,7 @@ const ctx = {
       httpOnlyHosts: [],
       extensions: [],
       stats: { blocked: 0, since: Date.now() },
+      siteDataCleared: false,
     });
     migrate(this.config);
     this.bookmarks = new JsonStore(path.join(dir, 'bookmarks.json'), { items: [] });

@@ -544,6 +544,43 @@ await step('settings and history pages render', async () => {
   shot('13-settings');
 });
 
+await step('first-start setup applies privacy choices', async () => {
+  assert.equal(await main((ctx) => ctx.settings().welcomeDone), false);
+  await main((ctx, r, w) => w.newTab({ url: 'lions://welcome/' }));
+  const page = await activePage(app, main);
+  await page.waitForSelector('.step[data-step="welcome"]:not([hidden])');
+  shot('16a-welcome');
+  await page.click('#next', { force: true });
+  await page.waitForSelector('.step[data-step="permissions"]:not([hidden])');
+  await page.click('#permission-rows .row:nth-child(1) .seg button[data-value="block"]', { force: true });
+  await until(() => main((ctx) => ctx.settings().defaultCamera === 'block'), 'camera blocked');
+  await page.click('#next', { force: true });
+  await page.waitForSelector('.step[data-step="privacy"]:not([hidden])');
+  await page.click('.preset[data-preset="strict"]', { force: true });
+  await until(() => main((ctx) => ctx.settings().blockThirdPartyCookies && ctx.settings().defaultLocation === 'block'), 'strict preset');
+  await page.waitForSelector('.preset[data-preset="strict"].on');
+  await wait(300);
+  shot('16b-welcome-privacy');
+  for (let i = 0; i < 4 && !(await page.isVisible('.step[data-step="done"]')); i++) await page.click('#next', { force: true });
+  await page.waitForSelector('.step[data-step="done"]:not([hidden])');
+  await page.click('#next', { force: true });
+  await until(() => main((ctx, r, w) => ctx.settings().welcomeDone && w.activeTab().url.startsWith('lions://newtab')), 'setup finished');
+
+  await main((ctx, r, w, url) => w.openUrl(url), `${BASE}/two?privacy`);
+  await until(() => main((ctx, r, w) => w.activeTab().title === 'Page Two'), 'web page');
+  const state = await main((ctx, r, w) => w.activeTab().wc.executeJavaScript("navigator.permissions.query({ name: 'geolocation' }).then((p) => p.state)"));
+  assert.equal(state, 'denied');
+
+  await main((ctx, r, w) => w.activeTab().wc.executeJavaScript("document.cookie = 'lion=roar; max-age=3600'; document.cookie"));
+  assert.ok((await main((ctx, r, w) => w.activeTab().wc.session.cookies.get({}))).length > 0, 'cookie set');
+  await main((ctx, r) => r('./sessions').clearSiteData());
+  assert.equal((await main((ctx, r, w) => w.activeTab().wc.session.cookies.get({}))).length, 0, 'cookies cleared');
+
+  await main((ctx) =>
+    ctx.setSettings({ defaultCamera: 'ask', blockThirdPartyCookies: false, defaultLocation: 'ask', defaultNotifications: 'ask', searchSuggestions: true }),
+  );
+});
+
 await step('dark mode', async () => {
   await main((ctx) => ctx.setSetting('theme', 'dark'));
   await main((ctx, r, w) => w.newTab());

@@ -1,6 +1,7 @@
 'use strict';
 
-const { session, app } = require('electron');
+const { session, app, webContents } = require('electron');
+const { getDomain } = require('tldts');
 const { ctx } = require('./context');
 const adblock = require('./adblock');
 const downloads = require('./downloads');
@@ -70,6 +71,38 @@ function consumeFailedUpgrade(webContentsId, failedUrl) {
   return rec.httpUrl;
 }
 
+function thirdParty(details) {
+  if (!ctx.settings().blockThirdPartyCookies || details.resourceType === 'mainFrame' || !/^https?:/.test(details.url)) return false;
+  const wc = details.webContentsId ? webContents.fromId(details.webContentsId) : null;
+  const top = wc && !wc.isDestroyed() ? wc.getURL() : '';
+  if (!/^https?:/.test(top)) return false;
+  const site = getDomain(top);
+  return Boolean(site) && getDomain(details.url) !== site;
+}
+
+function removeHeader(headers, name) {
+  let removed = false;
+  for (const key of Object.keys(headers)) {
+    if (key.toLowerCase() === name) {
+      delete headers[key];
+      removed = true;
+    }
+  }
+  return removed;
+}
+
+function persistent() {
+  const parts = new Set(['persist:main', ...ctx.workspaces().filter((w) => w.isolated).map((w) => `persist:ws-${w.id}`)]);
+  return [...parts].map((p) => session.fromPartition(p));
+}
+
+const SITE_DATA = ['cookies', 'localstorage', 'indexdb', 'websql', 'serviceworkers', 'cachestorage', 'filesystem'];
+
+async function clearSiteData() {
+  const work = Promise.all(persistent().map((ses) => ses.clearStorageData({ storages: SITE_DATA }).catch(() => {})));
+  await Promise.race([work, new Promise((resolve) => setTimeout(resolve, 4000))]);
+}
+
 function setup(ses, { isPrivate = false } = {}) {
   if (configured.has(ses)) return ses;
   configured.add(ses);
@@ -88,11 +121,13 @@ function setup(ses, { isPrivate = false } = {}) {
     adblock.onBeforeRequest(details, callback);
   });
   ses.webRequest.onHeadersReceived({ urls: ['<all_urls>'] }, (details, callback) => {
-    adblock.onHeadersReceived(details, callback);
+    const stripped = details.responseHeaders && thirdParty(details) && removeHeader(details.responseHeaders, 'set-cookie');
+    adblock.onHeadersReceived(details, (result = {}) => callback(stripped && !result.responseHeaders ? { ...result, responseHeaders: details.responseHeaders } : result));
   });
   ses.webRequest.onBeforeSendHeaders({ urls: ['<all_urls>'] }, (details, callback) => {
     const headers = details.requestHeaders;
     if (ctx.settings().gpc && details.url.startsWith('http')) headers['Sec-GPC'] = '1';
+    if (thirdParty(details)) removeHeader(headers, 'cookie');
     callback({ requestHeaders: headers });
   });
 
@@ -108,4 +143,4 @@ function init() {
   app.userAgentFallback = chromeUserAgent();
 }
 
-module.exports = { init, setup, forPartition, consumeFailedUpgrade, chromeUserAgent };
+module.exports = { init, setup, forPartition, consumeFailedUpgrade, chromeUserAgent, clearSiteData, persistent };

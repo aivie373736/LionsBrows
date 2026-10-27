@@ -169,6 +169,7 @@ async function general() {
     panel('Default browser', 'globe', card(row('Open links from other apps in LionsBrows', null, defaultBtn))),
     panel('Media', 'volume-x', card(row('Block sound from playing automatically', 'Videos start with sound only after you click on the page. Applies to new tabs.', toggle('blockAutoplay')))),
     languagePanel(),
+    panel('Setup assistant', 'sparkles', card(row('Run the first-start setup again', 'Permissions, privacy, import and look in a few steps.', el('a', { class: 'button', href: 'lions://welcome/' }, tr('Start setup'))))),
     await importPanel(),
   );
 }
@@ -569,7 +570,26 @@ async function privacy() {
         row('Global Privacy Control', 'Tell websites not to sell or share your data.', toggle('gpc')),
       ),
     ),
-    panel('Site permissions', 'globe', card(perms)),
+    panel(
+      'Cookies and site data',
+      'layers',
+      card(
+        row('When LionsBrows closes', 'Deleting cookies and site data signs you out of websites.', segmented('cookies', [['keep', 'Keep cookies'], ['session', 'Delete cookies and site data']])),
+        row('Block third-party cookies', 'Stops other sites from following you through embedded content. Some sign-ins and embedded videos may stop working.', toggle('blockThirdPartyCookies')),
+      ),
+    ),
+    panel(
+      'Site permissions',
+      'globe',
+      card(
+        row('Camera', null, segmented('defaultCamera', [['ask', 'Ask every time'], ['block', 'Block']])),
+        row('Microphone', null, segmented('defaultMicrophone', [['ask', 'Ask every time'], ['block', 'Block']])),
+        row('Location', null, segmented('defaultLocation', [['ask', 'Ask every time'], ['block', 'Block']])),
+        row('Notifications', null, segmented('defaultNotifications', [['ask', 'Ask every time'], ['block', 'Block']])),
+      ),
+      el('p', { class: 'group-label' }, tr('Saved decisions for single sites')),
+      card(perms),
+    ),
     panel(
       'Clear browsing data',
       'trash-2',

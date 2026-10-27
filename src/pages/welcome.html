@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Welcome to LionsBrows</title>
+    <link rel="icon" href="lions://assets/logo.svg" />
+    <link rel="stylesheet" href="lions://assets/theme.css" />
+    <link rel="stylesheet" href="common.css" />
+    <link rel="stylesheet" href="shell.css" />
+    <link rel="stylesheet" href="welcome.css" />
+  </head>
+  <body>
+    <main class="wizard">
+      <ol class="dots" id="dots" aria-label="Steps"></ol>
+
+      <section class="step" data-step="welcome">
+        <img class="hero-logo" src="lions://assets/logo.svg" alt="" width="84" height="84" />
+        <h1>Welcome to LionsBrows</h1>
+        <p class="lead">Let’s set up your browser. It takes about a minute, and you can change everything later in Settings.</p>
+        <div class="card" id="welcome-rows"></div>
+      </section>
+
+      <section class="step" data-step="permissions" hidden>
+        <h1>Permissions</h1>
+        <p class="lead">Choose what websites are allowed to ask for. You can still allow a single site later.</p>
+        <div class="card" id="permission-rows"></div>
+      </section>
+
+      <section class="step" data-step="privacy" hidden>
+        <h1>Privacy</h1>
+        <p class="lead">Pick a level of protection, or adjust each option yourself.</p>
+        <div class="presets" id="presets"></div>
+        <div class="card" id="privacy-rows"></div>
+      </section>
+
+      <section class="step" data-step="import" hidden>
+        <h1>Bring your data</h1>
+        <p class="lead">Import bookmarks and the last six months of history from another browser.</p>
+        <div class="card" id="import-rows"></div>
+      </section>
+
+      <section class="step" data-step="look" hidden>
+        <h1>Make it yours</h1>
+        <p class="lead">Choose how LionsBrows looks and how you search.</p>
+        <div class="card" id="look-rows"></div>
+      </section>
+
+      <section class="step" data-step="done" hidden>
+        <img class="hero-logo" src="lions://assets/logo.svg" alt="" width="84" height="84" />
+        <h1>You’re all set</h1>
+        <p class="lead">Your settings are saved. You can run this setup again from Settings at any time.</p>
+        <div class="card" id="done-rows"></div>
+      </section>
+
+      <footer class="nav">
+        <button class="button" id="back" type="button">Back</button>
+        <span class="grow"></span>
+        <button class="link" id="skip" type="button">Skip setup</button>
+        <button class="button primary" id="next" type="button">Next</button>
+      </footer>
+    </main>
+    <script src="lions://assets/icons.js"></script>
+    <script src="lions://assets/strings.js"></script>
+    <script src="lions://assets/i18n.js"></script>
+    <script src="common.js"></script>
+    <script src="welcome.js"></script>
+  </body>
+</html>
