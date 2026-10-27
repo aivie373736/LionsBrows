@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>LionsBrows – the complete browser, without the clutter</title>
+    <meta name="description" content="LionsBrows is a fast, private and minimal web browser built on Chromium. Free and open source for Windows, macOS and Linux." />
+    <meta property="og:title" content="LionsBrows" />
+    <meta property="og:description" content="The complete browser, without the clutter. Free and open source for Windows, macOS and Linux." />
+    <meta property="og:image" content="https://aivie373736.github.io/LionsBrows/screenshots/new-tab.png" />
+    <link rel="icon" href="logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap top-row">
+        <a class="brand" href="#"><img src="logo.svg" alt="" width="32" height="32" />LionsBrows</a>
+        <nav class="links" aria-label="Main">
+          <a href="#features" data-i18n="nav.features">Features</a>
+          <a href="#download" data-i18n="nav.download">Download</a>
+          <a href="https://github.com/aivie373736/LionsBrows" class="icon-link" aria-label="GitHub"><svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></a>
+          <button class="lang" id="lang" type="button" aria-label="Sprache wechseln">DE</button>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero wrap">
+        <img class="hero-logo" src="logo.svg" alt="" width="88" height="88" />
+        <h1 data-i18n="hero.title">The complete browser, without the clutter.</h1>
+        <p class="lead" data-i18n="hero.lead">LionsBrows is a fast, private browser built on Chromium. It has everything you need, stays out of your way and runs well even on older computers.</p>
+        <div class="actions">
+          <a class="button primary" id="main-download" href="#download"><svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /></svg><span data-i18n="hero.download">Download</span></a>
+          <a class="button" href="https://github.com/aivie373736/LionsBrows"><svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg><span data-i18n="hero.source">Source code</span></a>
+        </div>
+        <p class="fine" data-i18n="hero.fine">Free and open source · Windows, macOS and Linux</p>
+        <figure class="shot hero-shot">
+          <img src="screenshots/new-tab.png" alt="The LionsBrows new tab page" width="1100" height="717" />
+        </figure>
+      </section>
+
+      <section class="features wrap" id="features">
+        <h2 data-i18n="features.title">Everything you need. Nothing you don't.</h2>
+        <div class="grid">
+          <article class="feature"><svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 9h18" /></svg><h3 data-i18n="f.minimal.t">Minimal by default</h3><p data-i18n="f.minimal.p">Back, forward, reload, the address bar and a menu. Downloads, split view and notes appear only when you need them.</p></article>
+          <article class="feature"><svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" /></svg><h3 data-i18n="f.privacy.t">Blocks ads and trackers</h3><p data-i18n="f.privacy.p">Built-in blocking, automatic HTTPS, Global Privacy Control and private windows that forget everything when you close them.</p></article>
+          <article class="feature"><svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z" /></svg><h3 data-i18n="f.memory.t">Light on memory</h3><p data-i18n="f.memory.p">Inactive tabs go to sleep and a low-memory mode turns on by itself on computers with 4 GB of RAM or less.</p></article>
+          <article class="feature"><svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v16" /><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" /></svg><h3 data-i18n="f.reader.t">Reader view</h3><p data-i18n="f.reader.p">One click turns a cluttered article into clean text, in light, sepia or dark.</p></article>
+          <article class="feature"><svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" /></svg><h3 data-i18n="f.workspaces.t">Workspaces and split view</h3><p data-i18n="f.workspaces.p">Keep work and personal tabs apart, even with separate logins, and view two pages side by side.</p></article>
+          <article class="feature"><svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" /></svg><h3 data-i18n="f.command.t">Command bar</h3><p data-i18n="f.command.p">Press Ctrl+K to find open tabs, bookmarks, history and settings, or to do a quick calculation.</p></article>
+          <article class="feature"><svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4" /></svg><h3 data-i18n="f.import.t">Bring your bookmarks</h3><p data-i18n="f.import.p">Import bookmarks and history from Chrome, Edge, Brave, Vivaldi, Opera and Firefox.</p></article>
+          <article class="feature"><svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 8 6 6" /><path d="m4 14 6-6 2-3" /><path d="M2 5h12" /><path d="M7 2h1" /><path d="m22 22-5-10-5 10" /><path d="M14 18h6" /></svg><h3 data-i18n="f.lang.t">English and German</h3><p data-i18n="f.lang.p">The browser follows your system language, and you can switch at any time.</p></article>
+          <article class="feature"><svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /><path d="M20 2v4" /><path d="M22 4h-4" /><circle cx="4" cy="20" r="2" /></svg><h3 data-i18n="f.custom.t">Make it yours</h3><p data-i18n="f.custom.p">Your own video, image or color as the new tab background, any accent color and tabs on top or on the side.</p></article>
+        </div>
+      </section>
+
+      <section class="gallery wrap" aria-label="Screenshots">
+        <figure class="shot"><img src="screenshots/reader.png" alt="Reader view in sepia" width="1100" height="717" loading="lazy" /><figcaption data-i18n="g.reader">Reader view</figcaption></figure>
+        <figure class="shot"><img src="screenshots/vertical-tabs.png" alt="Tabs on the side with a custom toolbar color" width="1100" height="717" loading="lazy" /><figcaption data-i18n="g.vertical">Tabs on the side, in your colors</figcaption></figure>
+        <figure class="shot"><img src="screenshots/video-background.png" alt="A video as the new tab background" width="1100" height="717" loading="lazy" /><figcaption data-i18n="g.video">Your own video as the background</figcaption></figure>
+      </section>
+
+      <section class="download wrap" id="download">
+        <h2 data-i18n="d.title">Download LionsBrows</h2>
+        <div class="platforms">
+          <article class="platform" data-os="windows">
+            <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" /></svg><h3>Windows</h3><p data-i18n="d.windows">Windows 10 and 11</p>
+            <a class="button primary" href="https://github.com/aivie373736/LionsBrows/releases/latest/download/LionsBrows-win-x64.exe" data-asset="win-x64" data-i18n="d.get">Download</a>
+            <a class="alt" href="https://github.com/aivie373736/LionsBrows/releases/latest/download/LionsBrows-win-arm64.exe" data-asset="win-arm64" data-i18n="d.winarm">For ARM laptops</a>
+          </article>
+          <article class="platform" data-os="mac">
+            <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.528V3a1 1 0 0 1 1-1h0" /><path d="M18.237 21A15 15 0 0 0 22 11a6 6 0 0 0-10-4.472A6 6 0 0 0 2 11a15.1 15.1 0 0 0 3.763 10 3 3 0 0 0 3.648.648 5.5 5.5 0 0 1 5.178 0A3 3 0 0 0 18.237 21" /></svg><h3>macOS</h3><p data-i18n="d.mac">Apple silicon (M1 and newer)</p>
+            <a class="button primary" href="https://github.com/aivie373736/LionsBrows/releases/latest/download/LionsBrows-mac-arm64.dmg" data-asset="mac-arm64" data-i18n="d.get">Download</a>
+            <a class="alt" href="https://github.com/aivie373736/LionsBrows/releases/latest/download/LionsBrows-mac-x64.dmg" data-asset="mac-x64" data-i18n="d.macintel">For Intel Macs</a>
+          </article>
+          <article class="platform" data-os="linux">
+            <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19h8" /><path d="m4 17 6-6-6-6" /></svg><h3>Linux</h3><p data-i18n="d.linux">AppImage, 64-bit</p>
+            <a class="button primary" href="https://github.com/aivie373736/LionsBrows/releases/latest/download/LionsBrows-linux-x86_64.AppImage" data-asset="linux-x86_64" data-i18n="d.get">Download</a>
+            <a class="alt" href="https://github.com/aivie373736/LionsBrows/releases/latest/download/LionsBrows-linux-arm64.AppImage" data-asset="linux-arm64" data-i18n="d.linuxarm">For ARM (Raspberry Pi 4/5)</a>
+          </article>
+        </div>
+        <div class="note">
+          <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+          <p data-i18n="d.note">LionsBrows isn't code-signed yet, so Windows may show “Windows protected your PC”. Select <b>More info</b>, then <b>Run anyway</b>. On macOS, open the app with a right-click and choose <b>Open</b>.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bottom">
+      <div class="wrap bottom-row">
+        <span>LionsBrows · <a href="https://github.com/aivie373736/LionsBrows/blob/main/LICENSE" data-i18n="footer.license">MIT license</a></span>
+        <span><a href="https://github.com/aivie373736/LionsBrows/releases" data-i18n="footer.releases">All versions</a> · <a href="https://github.com/aivie373736/LionsBrows" data-i18n="footer.github">GitHub</a></span>
+      </div>
+    </footer>
+    <script src="main.js"></script>
+  </body>
+</html>

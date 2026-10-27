@@ -34,7 +34,7 @@
   "build": {
     "appId": "io.github.aivie373736.lionsbrows",
     "productName": "LionsBrows",
-    "artifactName": "LionsBrows-${version}-${os}-${arch}.${ext}",
+    "artifactName": "LionsBrows-${os}-${arch}.${ext}",
     "directories": {
       "output": "dist",
       "buildResources": "build"

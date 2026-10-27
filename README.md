@@ -6,6 +6,8 @@
 
 <p align="center">Everything you need in a browser, nothing you don't. A fast, private, minimal browser built on Chromium that runs well on low-memory devices.</p>
 
+<p align="center"><a href="https://aivie373736.github.io/LionsBrows/">Website</a> · <a href="../../releases/latest">Download</a></p>
+
 <p align="center">
   <img src="docs/screenshots/new-tab.png" width="860" alt="LionsBrows new tab page">
 </p>
@@ -44,11 +46,11 @@ Installers are built by GitHub Actions on every push:
 
 | System | Download |
 |---|---|
-| Windows 10/11 (Intel/AMD) | `LionsBrows-<version>-win-x64.exe` |
-| Windows 11 on ARM | `LionsBrows-<version>-win-arm64.exe` |
-| macOS (Apple silicon / Intel) | `LionsBrows-<version>-mac-arm64.dmg` / `-mac-x64.dmg` |
-| Linux (x64) | `LionsBrows-<version>-linux-x86_64.AppImage` |
-| Linux on ARM (e.g. Raspberry Pi 4/5, 64-bit OS) | `LionsBrows-<version>-linux-arm64.AppImage` |
+| Windows 10/11 (Intel/AMD) | [`LionsBrows-win-x64.exe`](../../releases/latest/download/LionsBrows-win-x64.exe) |
+| Windows 11 on ARM | [`LionsBrows-win-arm64.exe`](../../releases/latest/download/LionsBrows-win-arm64.exe) |
+| macOS (Apple silicon / Intel) | [`LionsBrows-mac-arm64.dmg`](../../releases/latest/download/LionsBrows-mac-arm64.dmg) / [`LionsBrows-mac-x64.dmg`](../../releases/latest/download/LionsBrows-mac-x64.dmg) |
+| Linux (x64) | [`LionsBrows-linux-x86_64.AppImage`](../../releases/latest/download/LionsBrows-linux-x86_64.AppImage) |
+| Linux on ARM (e.g. Raspberry Pi 4/5, 64-bit OS) | [`LionsBrows-linux-arm64.AppImage`](../../releases/latest/download/LionsBrows-linux-arm64.AppImage) |
 
 - Tagged versions are published on the [Releases](../../releases) page.
 - The latest build is available from the [Actions](../../actions) tab: open the most recent successful run and download the artifact for your system.
