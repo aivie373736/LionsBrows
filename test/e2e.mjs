@@ -35,6 +35,11 @@ const PAGES = {
         <p><img src="/lion.png" onerror="window.pwned = 1" alt="A lion"></p><script>window.inlineRan = 1</script></article>
         <footer>Copyright</footer>`,
   '/opener': `<title>Opener</title><script>window.openedOk = () => !!window.opener;</script>`,
+  '/shadow-login': `<title>Shadow login</title><login-box></login-box><script>
+        customElements.define('login-box', class extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }).innerHTML = '<input name="username" type="text"><input name="password" type="password"><button id="go">Log in</button>'; this.shadowRoot.getElementById('go').onclick = () => setTimeout(() => (location.href = '/two?shadow'), 100); } });
+        </script>`,
+  '/step1': `<title>Step 1</title><form action="/step2"><input type="email" name="identifier" autocomplete="username"><button>Next</button></form>`,
+  '/step2': `<title>Step 2</title><form action="/two"><input type="password" name="Passwd" autocomplete="current-password"><button>Next</button></form>`,
   '/autoplay': `<title>Autoplay</title><video src="/background.webm"></video>`,
   '/login': `<title>Sign in</title><form action="/two" method="get"><input id="user" name="u" type="email" autocomplete="username"><input id="pass" name="p" type="password" autocomplete="current-password"><button id="go" type="submit">Sign in</button></form>`,
   '/download': null,
@@ -359,6 +364,50 @@ await step('passwords are offered for saving, filled in and listed in settings',
   await assert.rejects(hist.evaluate(() => window.lions.call('passwordsInfo')));
   await main((ctx, r, w, url) => w.openUrl(url), `${BASE}/two?after-passwords`);
   await until(() => main((ctx, r, w) => w.activeTab().title === 'Page Two'), 'back on a web page');
+});
+
+await step('logins inside web components and two-step logins are captured and filled', async () => {
+  const reset = () => main((ctx, r, w) => {
+    w.hideBubble(false);
+    w.activeTab().pendingLogin = null;
+    for (const l of ctx.passwords.list()) ctx.passwords.remove(l.id);
+  });
+  const open = async (url) => {
+    await main((ctx, r, w, u) => w.openUrl(u), url);
+    await until(() => main((ctx, r, w, u) => w.activeTab().wc.getURL() === u && !w.activeTab().wc.isLoading(), url), 'page loaded');
+    return activePage(app, main);
+  };
+  const pendingName = () => until(() => main((ctx, r, w) => w.activeTab().pendingLogin && w.activeTab().pendingLogin.username), 'login captured');
+  const saveIt = () => main((ctx, r, w) => {
+    r('./logins').save(w.activeTab());
+    w.hideBubble(false);
+  });
+
+  await reset();
+  let page = await open(`${BASE}/shadow-login`);
+  await page.fill('input[name="username"]', 'shadowlion');
+  await page.fill('input[name="password"]', 'shadow-pw');
+  await page.click('#go', { force: true });
+  assert.equal(await pendingName(), 'shadowlion');
+  await saveIt();
+  page = await open(`${BASE}/shadow-login?again`);
+  await until(() => page.inputValue('input[name="password"]').then((v) => v === 'shadow-pw'), 'filled inside the web component');
+
+  await reset();
+  page = await open(`${BASE}/step1`);
+  await page.fill('input[type="email"]', 'two.step@example.com');
+  await page.click('button', { force: true });
+  await until(() => main((ctx, r, w) => w.activeTab().wc.getURL().includes('/step2')), 'second step');
+  page = await activePage(app, main);
+  await page.fill('input[type="password"]', 'two-step-pw');
+  await page.click('button', { force: true });
+  assert.equal(await pendingName(), 'two.step@example.com');
+  await saveIt();
+  page = await open(`${BASE}/step1?again`);
+  await until(() => page.inputValue('input[type="email"]').then((v) => v === 'two.step@example.com'), 'username filled on step 1');
+  page = await open(`${BASE}/step2?again`);
+  await until(() => page.inputValue('input[type="password"]').then((v) => v === 'two-step-pw'), 'password filled on step 2');
+  await reset();
 });
 
 await step('autoplay with sound is blocked by default', async () => {

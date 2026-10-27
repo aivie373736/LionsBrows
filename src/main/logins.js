@@ -2,7 +2,10 @@
 
 const { ipcMain, safeStorage } = require('electron');
 const { ctx } = require('./context');
+const { getDomain } = require('tldts');
 const { originOf } = require('./passwords');
+
+const USERNAME_MEMORY = 10 * 60 * 1000;
 
 const codec = {
   encrypt: (text) => available() && safeStorage.encryptString(text).toString('base64'),
@@ -39,9 +42,11 @@ function onSubmitted(event, data) {
   const { w, t } = tabFor(event.sender);
   if (!origin || !w || w.isPrivate || !available()) return;
   if (!ctx.settings().offerToSavePasswords || ctx.passwords.isNever(origin)) return;
-  const username = String(data?.username || '').slice(0, 500);
+  let username = String(data?.username || '').slice(0, 500);
   const password = String(data?.password || '').slice(0, 1000);
   if (!password) return;
+  const remembered = t.lastUsername;
+  if (!username && remembered && Date.now() - remembered.at < USERNAME_MEMORY && sameSite(remembered.origin, origin)) username = remembered.username;
   const state = ctx.passwords.check(origin, username, password);
   if (state === 'same') {
     ctx.passwords.markUsed(ctx.passwords.find(origin, username).id);
@@ -52,6 +57,19 @@ function onSubmitted(event, data) {
   else w.scheduleState();
 }
 
+function sameSite(a, b) {
+  if (a === b) return true;
+  const da = getDomain(a);
+  return Boolean(da) && da === getDomain(b);
+}
+
+function onUsernameSubmitted(event, data) {
+  const origin = frameOrigin(event);
+  const { t } = tabFor(event.sender);
+  const username = String(data?.username || '').slice(0, 500);
+  if (origin && t && username) t.lastUsername = { origin, username, at: Date.now() };
+}
+
 function onForm(event) {
   const { w, t } = tabFor(event.sender);
   if (!t || !frameOrigin(event)) return;
@@ -59,11 +77,12 @@ function onForm(event) {
   w.scheduleState();
 }
 
-function autofill(event) {
+function autofill(event, opts = {}) {
   const origin = frameOrigin(event);
   if (!origin || !ctx.settings().autofillPasswords || !available()) return null;
   const logins = ctx.passwords.forOrigin(origin);
   if (logins.length !== 1) return null;
+  if (opts && opts.usernameOnly) return { username: logins[0].username };
   ctx.passwords.markUsed(logins[0].id);
   const { username, password } = ctx.passwords.credentials(logins[0].id);
   return { username, password };
@@ -104,6 +123,7 @@ function never(tab) {
 function init() {
   ipcMain.on('lions:password-submitted', onSubmitted);
   ipcMain.on('lions:password-form', onForm);
+  ipcMain.on('lions:username-submitted', onUsernameSubmitted);
   ipcMain.handle('lions:password-autofill', autofill);
 }
 
