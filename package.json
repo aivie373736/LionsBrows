@@ -44,6 +44,11 @@
       "package.json",
       "!**/*.map"
     ],
+    "compression": "maximum",
+    "electronLanguages": [
+      "en-US",
+      "de"
+    ],
     "electronDownload": {
       "mirror": "https://github.com/castlabs/electron-releases/releases/download/"
     },

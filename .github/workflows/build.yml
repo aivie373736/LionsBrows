@@ -61,11 +61,51 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
-      - uses: actions/upload-artifact@v4
+      - name: Upload Windows x64
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
         with:
-          name: LionsBrows-${{ runner.os }}
-          path: |
-            dist/*.exe
-            dist/*.dmg
-            dist/*.AppImage
+          name: LionsBrows-Windows-x64
+          path: dist/LionsBrows-win-x64.exe
+          compression-level: 0
+          if-no-files-found: error
+      - name: Upload Windows ARM
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LionsBrows-Windows-ARM
+          path: dist/LionsBrows-win-arm64.exe
+          compression-level: 0
+          if-no-files-found: error
+      - name: Upload macOS Apple silicon
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LionsBrows-macOS-AppleSilicon
+          path: dist/LionsBrows-mac-arm64.dmg
+          compression-level: 0
+          if-no-files-found: error
+      - name: Upload macOS Intel
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LionsBrows-macOS-Intel
+          path: dist/LionsBrows-mac-x64.dmg
+          compression-level: 0
+          if-no-files-found: error
+      - name: Upload Linux x64
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LionsBrows-Linux-x64
+          path: dist/LionsBrows-linux-x86_64.AppImage
+          compression-level: 0
+          if-no-files-found: error
+      - name: Upload Linux ARM
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LionsBrows-Linux-ARM
+          path: dist/LionsBrows-linux-arm64.AppImage
+          compression-level: 0
           if-no-files-found: error
