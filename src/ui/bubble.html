@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>Bubble</title>
+    <link rel="stylesheet" href="../shared/theme.css" />
+    <link rel="stylesheet" href="bubble.css" />
+  </head>
+  <body>
+    <div id="card" role="dialog" aria-labelledby="title" hidden>
+      <header>
+        <span class="lead" id="lead"></span>
+        <h1 id="title"></h1>
+        <button class="icon-btn" id="close" title="Close" aria-label="Close"></button>
+      </header>
+      <label class="field">
+        <span>Username</span>
+        <input id="username" type="text" spellcheck="false" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <span class="pw">
+          <input id="password" type="password" readonly />
+          <button class="icon-btn" id="reveal" type="button" title="Show password" aria-label="Show password"></button>
+        </span>
+      </label>
+      <footer>
+        <button class="button" id="secondary" type="button"></button>
+        <button class="button primary" id="primary" type="button"></button>
+      </footer>
+    </div>
+    <script src="../shared/icons.js"></script>
+    <script src="../shared/locales/de.js"></script>
+    <script src="../shared/i18n.js"></script>
+    <script src="bubble.js"></script>
+  </body>
+</html>

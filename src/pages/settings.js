@@ -7,6 +7,7 @@ const SECTIONS = [
   ['search', 'Search', 'search'],
   ['performance', 'Performance', 'zap'],
   ['privacy', 'Privacy and security', 'lock'],
+  ['passwords', 'Passwords', 'key-round'],
   ['downloads', 'Downloads', 'download'],
   ['extensions', 'Extensions', 'puzzle'],
   ['shortcuts', 'Keyboard shortcuts', 'keyboard'],
@@ -166,6 +167,7 @@ async function general() {
       card(row('When LionsBrows starts', null, select('startup', [['restore', 'Continue where you left off'], ['newtab', 'Open a new tab']]))),
     ),
     panel('Default browser', 'globe', card(row('Open links from other apps in LionsBrows', null, defaultBtn))),
+    panel('Media', 'volume-x', card(row('Block sound from playing automatically', 'Videos start with sound only after you click on the page. Applies to new tabs.', toggle('blockAutoplay')))),
     languagePanel(),
     await importPanel(),
   );
@@ -586,6 +588,100 @@ async function privacy() {
   );
 }
 
+async function passwords() {
+  const list = el('div', { class: 'mini-list' });
+  const neverList = el('div', { class: 'mini-list' });
+  const neverPanel = panel('Never saved', 'circle-x', card(neverList));
+  const note = el('div', { class: 'row' });
+
+  const loginRow = (l) => {
+    const secret = el('span', { class: 'secret' }, '••••••••');
+    let shown = false;
+    const reveal = el('button', { class: 'icon-btn', title: tr('Show password'), 'aria-label': tr('Show password'), html: icon('eye', 16) });
+    reveal.onclick = async () => {
+      shown = !shown;
+      secret.textContent = shown ? await api.call('passwordReveal', l.id) : '••••••••';
+      reveal.innerHTML = icon(shown ? 'eye-off' : 'eye', 16);
+      reveal.title = shown ? tr('Hide password') : tr('Show password');
+    };
+    const copy = el('button', { class: 'icon-btn', title: tr('Copy password'), 'aria-label': tr('Copy password'), html: icon('copy', 16) });
+    copy.onclick = async () => {
+      await navigator.clipboard.writeText(await api.call('passwordReveal', l.id));
+      toast(tr('Password copied'));
+    };
+    const remove = el('button', { class: 'icon-btn', title: tr('Delete'), 'aria-label': tr('Delete'), html: icon('trash-2', 16) });
+    remove.onclick = async () => {
+      await api.call('passwordRemove', l.id);
+      render();
+    };
+    return el(
+      'div',
+      { class: 'list-item login' },
+      faviconEl(`${l.origin}/favicon.ico`),
+      el('span', { class: 'host' }, new URL(l.origin).host),
+      el('span', { class: 'user' }, l.username || tr('(no username)')),
+      secret,
+      reveal,
+      copy,
+      remove,
+    );
+  };
+
+  const render = async () => {
+    const info = await api.call('passwordsInfo');
+    list.replaceChildren(...(info.logins.length ? info.logins.map(loginRow) : [row('No saved passwords', 'When you sign in to a site, LionsBrows offers to save the password.', null)]));
+    neverList.replaceChildren(
+      ...info.never.map((origin) =>
+        listRow(new URL(origin).host, tr('Remove'), async () => {
+          await api.call('passwordNeverRemove', origin);
+          render();
+        }),
+      ),
+    );
+    neverPanel.hidden = !info.never.length;
+    note.hidden = info.available && !info.weak;
+    note.replaceChildren(
+      el('div', { class: 'label' }, el('div', {}, info.available ? tr('Basic protection') : tr('Passwords can’t be saved')), el('div', { class: 'sub' }, info.available ? tr('No system keyring was found, so passwords are only lightly protected on this device.') : tr('Your system doesn’t provide secure storage.'))),
+    );
+  };
+
+  const importBtn = el('button', { class: 'button' }, tr('Import'));
+  importBtn.title = tr('CSV export from Chrome, Edge, Firefox, Brave or Bitwarden');
+  importBtn.onclick = async () => {
+    try {
+      const n = await api.call('passwordsImport');
+      if (n !== null) toast(n === 1 ? tr('Imported 1 password') : tr('Imported {n} passwords', { n }));
+      render();
+    } catch (err) {
+      toast(errorText(err));
+    }
+  };
+  const exportBtn = el('button', { class: 'button' }, tr('Export'));
+  exportBtn.onclick = async () => {
+    if (await api.call('passwordsExport')) toast(tr('Passwords exported'));
+  };
+
+  await render();
+  api.on((name) => name === 'passwords-changed' && render());
+
+  return section(
+    'passwords',
+    null,
+    panel(
+      'Passwords',
+      'key-round',
+      card(
+        row('Offer to save passwords', 'Not used in private windows.', toggle('offerToSavePasswords')),
+        row('Fill in passwords automatically', 'When one password is saved for a site.', toggle('autofillPasswords')),
+        row('Import and export', 'Import a CSV file exported from Chrome, Edge, Firefox, Brave or Bitwarden.', el('div', { class: 'inline' }, importBtn, exportBtn)),
+        note,
+      ),
+    ),
+    panel('Saved passwords', 'list', card(list)),
+    neverPanel,
+  );
+}
+
 function downloads() {
   const path = el('div', { class: 'path' }, S.downloadsDir);
   const change = el('button', { class: 'button' }, tr('Change'));
@@ -717,7 +813,7 @@ async function build() {
     nav.append(a);
   }
 
-  const parts = await Promise.all([general(), appearance(), newtabSection(), search(), performance(), privacy(), downloads(), extensions(), shortcuts(), about()]);
+  const parts = await Promise.all([general(), appearance(), newtabSection(), search(), performance(), privacy(), passwords(), downloads(), extensions(), shortcuts(), about()]);
   document.getElementById('sections').append(...parts);
   setupSearch();
 

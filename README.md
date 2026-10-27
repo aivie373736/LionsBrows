@@ -21,8 +21,9 @@
 - **Search engine choice:** pick Google, DuckDuckGo, Bing, Brave Search, Ecosia, Startpage, Qwant, Yahoo or a custom engine, right from the new tab page.
 - **Personalization:** use your own video, image or a solid color as the new tab background. You can also choose the accent color and toolbar color, and switch between light and dark mode.
 - **Made for low-memory devices:** Memory saver puts inactive tabs to sleep and limits how many background tabs stay active. Low-memory mode uses fewer processes and smaller caches. Both turn on automatically on devices with 4 GB of RAM or less, and when the system runs low on memory, background tabs are suspended immediately. Settings shows memory usage per tab.
-- **Tracking protection:** built-in ad and tracker blocking with per-site exceptions, automatic HTTPS upgrades, Global Privacy Control and private windows.
+- **Tracking protection:** built-in ad and tracker blocking with per-site exceptions, automatic HTTPS upgrades, Global Privacy Control, blocking of autoplaying sound and private windows.
 - **Minimal by default:** the toolbar only shows back, forward, reload, the address bar and the menu. Downloads, split view and notes appear when you need them, and you can add buttons back with a right-click on the toolbar.
+- **Password manager:** offers to save logins, fills them in, and keeps them encrypted with Windows DPAPI, the macOS Keychain or the Linux keyring. Import and export CSV files from Chrome, Edge, Firefox, Brave and Bitwarden.
 - **Reader view:** one click turns cluttered articles into clean text, with font, size and light, sepia or dark themes.
 - **Import from other browsers:** bring over bookmarks and history from Chrome, Edge, Brave, Vivaldi, Opera and Firefox.
 - **Automatic updates:** new versions download in the background and install on restart.
@@ -111,7 +112,7 @@ LionsBrows uses [Electron for Content Security](https://github.com/castlabs/elec
 ### Known limitations
 
 - Chrome Web Store extensions cannot be installed directly. Unpacked extensions can be loaded from *Settings → Extensions* (experimental).
-- There is no built-in password manager or sync.
+- There is no sync between devices.
 - Some streaming services only play in builds that are VMP-signed with a castLabs EVS account (see below).
 - Automatic updates need the GitHub releases to be public.
 

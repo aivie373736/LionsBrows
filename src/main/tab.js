@@ -32,6 +32,8 @@ class Tab {
     this.errorUrl = null;
     this.readerable = false;
     this.navigations = 0;
+    this.hasLoginForm = false;
+    this.pendingLogin = null;
     this.typed = false;
     this.lastActive = Date.now();
     this.savedHistory = null;
@@ -90,6 +92,7 @@ class Tab {
             plugins: true,
             spellcheck: true,
             safeDialogs: true,
+            autoplayPolicy: ctx.settings().blockAutoplay ? 'document-user-activation-required' : 'no-user-gesture-required',
             scrollBounce: true,
           },
         };
@@ -127,6 +130,7 @@ class Tab {
       this.#syncBackground(event.url);
       this.blocked = 0;
       this.readerable = false;
+      this.hasLoginForm = false;
       this.navigations++;
     });
     wc.on('did-finish-load', () => this.#checkReader(wc));

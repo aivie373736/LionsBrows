@@ -14,7 +14,7 @@ const ICONS = [
   'zap', 'command', 'sparkles', 'pause', 'play', 'file', 'arrow-up-right', 'corner-down-left', 'arrow-left-right',
   'moon-star', 'circle-check', 'circle-x', 'upload', 'info', 'monitor', 'palette', 'keyboard', 'zoom-in',
   'menu', 'image', 'film', 'check', 'sliders-horizontal', 'pencil', 'list', 'paintbrush',
-  'book-open', 'import', 'refresh-cw', 'circle-arrow-up', 'languages',
+  'book-open', 'import', 'refresh-cw', 'circle-arrow-up', 'languages', 'key-round', 'eye',
   'minus', 'sun-moon',
 ];
 

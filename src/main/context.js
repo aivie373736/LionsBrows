@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   customSearchName: '',
   customSearchUrl: '',
   startup: 'restore',
+  blockAutoplay: true,
   language: 'auto',
   autoUpdate: true,
   layout: 'horizontal',
@@ -44,6 +45,8 @@ const DEFAULT_SETTINGS = {
   readerFont: 'serif',
   readerSize: 20,
   readerTheme: 'auto',
+  offerToSavePasswords: true,
+  autofillPasswords: true,
 };
 
 const ACCENTS = {
@@ -91,6 +94,7 @@ const ctx = {
   sessionStore: null,
   notes: null,
   history: null,
+  passwords: null,
 
   init() {
     const dir = app.getPath('userData');
@@ -108,6 +112,8 @@ const ctx = {
     this.sessionStore = new JsonStore(path.join(dir, 'session.json'), { windows: [] });
     this.notes = new JsonStore(path.join(dir, 'notes.json'), {});
     this.history = new History(path.join(dir, 'history.sqlite'));
+    const { Vault } = require('./passwords');
+    this.passwords = new Vault(path.join(dir, 'passwords.json'), require('./logins').codec);
     nativeTheme.themeSource = this.settings().theme;
     syncCustomEngine(this.settings());
   },
@@ -154,7 +160,7 @@ const ctx = {
   },
 
   flushAll() {
-    for (const s of [this.config, this.bookmarks, this.sessionStore, this.notes]) {
+    for (const s of [this.config, this.bookmarks, this.sessionStore, this.notes, this.passwords]) {
       try {
         s.flush();
       } catch (err) {

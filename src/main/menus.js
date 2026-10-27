@@ -389,6 +389,20 @@ function allTabsMenu(w, x, y) {
   );
 }
 
+function passwordMenu(w, x, y) {
+  const tab = w.activeTab();
+  const saved = require('./logins').savedFor(tab);
+  popup(
+    w,
+    [
+      ...saved.map((l) => ({ label: l.username || tr('(no username)'), click: () => require('./logins').fill(tab, l.id) })),
+      saved.length ? SEP : null,
+      { label: tr('Manage passwords'), click: () => w.newTab({ url: 'lions://settings/#passwords' }) },
+    ],
+    { x: Math.round(x), y: Math.round(y) },
+  );
+}
+
 function bookmarkMenu(w, id) {
   const b = require('./bookmarks')
     .all()
@@ -443,4 +457,4 @@ function installAppMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-module.exports = { pageMenu, tabMenu, mainMenu, toolbarMenu, shieldMenu, workspaceMenu, workspaceSwitcher, allTabsMenu, bookmarkMenu, installAppMenu, openInternal };
+module.exports = { pageMenu, tabMenu, mainMenu, toolbarMenu, passwordMenu, shieldMenu, workspaceMenu, workspaceSwitcher, allTabsMenu, bookmarkMenu, installAppMenu, openInternal };

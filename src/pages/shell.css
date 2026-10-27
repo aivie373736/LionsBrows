@@ -362,6 +362,30 @@ input[type='checkbox'] {
 .mini-list .list-item .host {
   color: var(--text);
 }
+.list-item.login .host {
+  flex: 0 1 34%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.list-item.login .user {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.list-item.login .secret {
+  width: 140px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .pill-tag {
   font-size: 12.5px;
   padding: 3px 10px;

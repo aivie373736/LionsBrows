@@ -7,6 +7,7 @@ const palette = require('./palette');
 const downloads = require('./downloads');
 const internalApi = require('./internal-api');
 const { run, openInternal } = require('./actions');
+const logins = require('./logins');
 
 const privateNotes = new Map();
 
@@ -40,6 +41,11 @@ const UI = {
   openBookmark: (w, url, newTab) => /^https?:/i.test(String(url)) && w.openUrl(String(url), { newTab: Boolean(newTab), background: Boolean(newTab) }),
   toggleBookmark: (w) => run('bookmark', w),
   toggleReader: (w) => run('reader', w),
+  passwordKey: (w, x, y) => (w.activeTab()?.pendingLogin ? w.showPasswordBubble() : menus.passwordMenu(w, x, y)),
+  addressAnchor: (w, right, bottom) => {
+    w.addressAnchor = { right: Number(right) || 0, bottom: Number(bottom) || 0 };
+    if (w.bubbleOpen) w.layout();
+  },
   toggleMute: (w, id) => {
     const t = w.tabById(id);
     if (t) t.setMuted(!t.muted);
@@ -63,6 +69,27 @@ const UI = {
   reopenTab: (w) => w.reopenClosed(),
 };
 
+const BUBBLE = {
+  size: (w, height) => {
+    w.bubbleHeight = Math.max(80, Math.min(480, Math.ceil(Number(height) || 0)));
+    w.layout();
+  },
+  passwordSave: (w, username) => {
+    logins.save(w.activeTab(), username);
+    w.hideBubble();
+  },
+  passwordNever: (w) => {
+    logins.never(w.activeTab());
+    w.hideBubble();
+  },
+  passwordDismiss: (w) => {
+    const tab = w.activeTab();
+    if (tab) tab.pendingLogin = null;
+    w.hideBubble();
+  },
+  close: (w) => w.hideBubble(),
+};
+
 const OVERLAY = {
   query: (w, text, mode) => palette.query(w, String(text || ''), mode),
   suggest: (w, text) => palette.suggest(w, String(text || '')),
@@ -74,6 +101,7 @@ function windowFor(sender, kind) {
   for (const w of ctx.windows) {
     if (kind === 'ui' && w.ui.webContents === sender) return w;
     if (kind === 'overlay' && w.overlay?.webContents === sender) return w;
+    if (kind === 'bubble' && w.bubble?.webContents === sender) return w;
   }
   return null;
 }
@@ -91,7 +119,14 @@ function init() {
     if (!w || !fn) return undefined;
     return fn(w, ...args);
   });
+  ipcMain.handle('bubble:cmd', (event, cmd, ...args) => {
+    const w = windowFor(event.sender, 'bubble');
+    const fn = BUBBLE[cmd];
+    if (!w || !fn) return undefined;
+    return fn(w, ...args);
+  });
   ipcMain.handle('lions:call', (event, method, ...args) => internalApi.call(event, method, ...args));
+  logins.init();
 }
 
 module.exports = { init };

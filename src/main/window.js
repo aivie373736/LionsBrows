@@ -13,6 +13,8 @@ const i18n = require('./i18n');
 const UI_PRELOAD = path.join(__dirname, '..', 'preload', 'ui.js');
 const UI_HTML = path.join(__dirname, '..', 'ui', 'index.html');
 const OVERLAY_HTML = path.join(__dirname, '..', 'ui', 'overlay.html');
+const BUBBLE_HTML = path.join(__dirname, '..', 'ui', 'bubble.html');
+const BUBBLE_W = 388;
 const ICON = path.join(__dirname, '..', 'shared', 'icon.png');
 
 const VERTICAL = { toolbar: 48, sidebar: 252, sidebarCollapsed: 60, panel: 340, find: 44, gap: 8, radius: 8 };
@@ -57,6 +59,11 @@ class BrowserWin {
     this.wasFullscreen = false;
     this.overlay = null;
     this.overlayOpen = false;
+    this.bubble = null;
+    this.bubbleOpen = false;
+    this.bubbleTab = null;
+    this.bubbleHeight = 220;
+    this.addressAnchor = null;
     this.statePending = false;
     this.forget = false;
     this.lastArea = { x: 0, y: 0, width: 800, height: 600 };
@@ -157,7 +164,7 @@ class BrowserWin {
     ctx.windows.delete(this);
     for (const tab of this.tabsById.values()) tab.destroy();
     this.tabsById.clear();
-    for (const view of [this.ui, this.overlay]) liveContents(view)?.close();
+    for (const view of [this.ui, this.overlay, this.bubble]) liveContents(view)?.close();
     if (this.isPrivate) {
       const ses = require('electron').session.fromPartition(ctx.partitionFor(null, true, this.privateId));
       ses.clearStorageData().catch(() => {});
@@ -167,7 +174,7 @@ class BrowserWin {
 
   ownsWebContents(wc) {
     if (!wc) return false;
-    if (wc === this.ui.webContents || wc === this.overlay?.webContents) return true;
+    if (wc === this.ui.webContents || wc === this.overlay?.webContents || wc === this.bubble?.webContents) return true;
     for (const t of this.tabsById.values()) if (t.wc === wc) return true;
     return false;
   }
@@ -268,6 +275,7 @@ class BrowserWin {
     s.activeId = tab.id;
     tab.lastActive = Date.now();
     if (this.find.open) this.closeFind(false);
+    if (this.bubbleOpen && this.bubbleTab !== tab.id) this.hideBubble(false);
     this.layout();
     if (!this.overlayOpen) this.focusActive();
     this.scheduleState();
@@ -299,6 +307,7 @@ class BrowserWin {
     }
     s.tabs.splice(idx, 1);
     this.tabsById.delete(id);
+    if (this.bubbleTab === id) this.hideBubble(false);
     if (this.htmlFullscreenTab === tab) this.setHtmlFullscreen(tab, false);
 
     if (s.split && (s.split.a === id || s.split.b === id)) {
@@ -569,13 +578,72 @@ class BrowserWin {
         this.detachView(tab.view);
       }
     }
-    if (this.overlayOpen) {
+    if (this.bubbleOpen) {
       if (added) {
+        this.win.contentView.removeChildView(this.bubble);
+        this.win.contentView.addChildView(this.bubble);
+      }
+      const anchor = this.addressAnchor || { right: width - 8, bottom: this.lastArea.y };
+      const x = Math.max(8, Math.min(width - BUBBLE_W - 8, anchor.right - BUBBLE_W + 12));
+      this.bubble.setBounds({ x, y: anchor.bottom + 2, width: BUBBLE_W, height: Math.min(this.bubbleHeight, height - anchor.bottom - 8) });
+    }
+    if (this.overlayOpen) {
+      if (added || this.bubbleOpen) {
         this.win.contentView.removeChildView(this.overlay);
         this.win.contentView.addChildView(this.overlay);
       }
       this.overlay.setBounds({ x: 0, y: 0, width, height });
     }
+  }
+
+  #ensureBubble() {
+    if (this.bubble) return this.bubbleReady;
+    this.bubble = new WebContentsView({ webPreferences: { preload: UI_PRELOAD, sandbox: true, contextIsolation: true, transparent: true, spellcheck: false } });
+    this.bubble.setBackgroundColor('#00000000');
+    this.bubbleReady = new Promise((resolve) => this.bubble.webContents.once('did-finish-load', resolve));
+    this.bubble.webContents.loadFile(BUBBLE_HTML, { query: { platform: process.platform, lang: i18n.lang() } });
+    this.bubble.webContents.on('before-input-event', (event, input) => {
+      if (input.type === 'keyDown' && input.key === 'Escape') {
+        event.preventDefault();
+        this.hideBubble();
+      }
+    });
+    return this.bubbleReady;
+  }
+
+  async showPasswordBubble() {
+    const tab = this.activeTab();
+    const pending = tab?.pendingLogin;
+    if (!pending) return;
+    await this.#ensureBubble();
+    if (this.win.isDestroyed() || this.activeTab() !== tab) return;
+    if (!this.bubbleOpen) {
+      this.win.contentView.addChildView(this.bubble);
+      this.bubbleOpen = true;
+    }
+    this.bubbleTab = tab.id;
+    this.layout();
+    this.bubble.webContents.send('bubble:show', {
+      kind: 'password',
+      host: new URL(pending.origin).host,
+      username: pending.username,
+      password: pending.password,
+      update: pending.update,
+      accent: ctx.accentColor(),
+      dark: nativeTheme.shouldUseDarkColors,
+      isPrivate: this.isPrivate,
+    });
+    this.bubble.webContents.focus();
+    this.scheduleState();
+  }
+
+  hideBubble(refocus = true) {
+    if (!this.bubbleOpen) return;
+    this.bubbleOpen = false;
+    this.bubbleTab = null;
+    if (!this.win.isDestroyed()) this.win.contentView.removeChildView(this.bubble);
+    if (refocus) this.focusActive();
+    this.scheduleState();
   }
 
   setHtmlFullscreen(tab, on) {
@@ -716,8 +784,10 @@ class BrowserWin {
       const st = active.state();
       const url = active.displayUrl;
       const isWeb = /^https?:/.test(url);
+      const saved = require('./logins').savedFor(active).length;
       nav = {
         ...st,
+        key: active.pendingLogin ? 'pending' : active.hasLoginForm && saved ? 'saved' : null,
         display: omnibox.displayUrl(url),
         secure: url.startsWith('https:') || url.startsWith('lions:'),
         isWeb,

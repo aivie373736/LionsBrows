@@ -334,6 +334,46 @@ const API = {
       .map(([id, a]) => ({ title: tr(a.title, a.vars), keys: shortcutLabel(id) }));
   },
 
+  passwordsInfo() {
+    const logins = require('./logins');
+    return { available: logins.available(), weak: logins.weakStorage(), logins: ctx.passwords.list(), never: ctx.passwords.never() };
+  },
+  passwordReveal(_s, id) {
+    return ctx.passwords.password(String(id));
+  },
+  passwordRemove(_s, id) {
+    ctx.passwords.remove(String(id));
+  },
+  passwordNeverRemove(_s, origin) {
+    ctx.passwords.removeNever(String(origin));
+  },
+  async passwordsImport(sender) {
+    const { w } = findTab(sender);
+    const { canceled, filePaths } = await dialog.showOpenDialog(w?.win, { title: tr('Import passwords'), filters: [{ name: tr('Passwords (CSV)'), extensions: ['csv'] }], properties: ['openFile'] });
+    if (canceled || !filePaths[0]) return null;
+    try {
+      return ctx.passwords.importCsv(fs.readFileSync(filePaths[0], 'utf8'));
+    } catch {
+      throw new Error(tr('This file doesn’t look like a password export.'));
+    }
+  },
+  async passwordsExport(sender) {
+    const { w } = findTab(sender);
+    const { response } = await dialog.showMessageBox(w?.win, {
+      type: 'warning',
+      buttons: [tr('Export'), tr('Cancel')],
+      defaultId: 1,
+      cancelId: 1,
+      message: tr('Export your passwords?'),
+      detail: tr('The file is not encrypted. Anyone who can open it can read your passwords.'),
+    });
+    if (response !== 0) return false;
+    const { canceled, filePath } = await dialog.showSaveDialog(w?.win, { defaultPath: 'lionsbrows-passwords.csv', filters: [{ name: 'CSV', extensions: ['csv'] }] });
+    if (canceled || !filePath) return false;
+    fs.writeFileSync(filePath, ctx.passwords.exportCsv(), { mode: 0o600 });
+    return true;
+  },
+
   readerArticle(_s, id) {
     return require('./reader').article(id);
   },
@@ -343,6 +383,8 @@ const API = {
   },
 };
 
+const SETTINGS_ONLY = new Set(['passwordsInfo', 'passwordReveal', 'passwordRemove', 'passwordNeverRemove', 'passwordsImport', 'passwordsExport']);
+
 const LIMITED = {
   reader: ['getSettings', 'setSettings', 'readerArticle'],
   error: ['getSettings'],
@@ -351,8 +393,10 @@ const LIMITED = {
 async function call(event, method, ...args) {
   const url = event.senderFrame?.url || '';
   if (!url.startsWith('lions://')) throw new Error('Not allowed');
-  const allowed = LIMITED[new URL(url).hostname];
+  const host = new URL(url).hostname;
+  const allowed = LIMITED[host];
   if (allowed && !allowed.includes(method)) throw new Error('Not allowed');
+  if (SETTINGS_ONLY.has(method) && host !== 'settings') throw new Error('Not allowed');
   const fn = API[method];
   if (typeof fn !== 'function') throw new Error(`Unknown method ${method}`);
   return fn(event.sender, ...args);

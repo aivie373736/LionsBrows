@@ -29,6 +29,7 @@ $('#btn-alltabs').innerHTML = icon('chevron-down', 16);
 $('#btn-settings').innerHTML = icon('settings');
 $('#addr-star').innerHTML = icon('star', 16);
 $('#addr-reader').innerHTML = icon('book-open', 16);
+$('#addr-key').innerHTML = icon('key-round', 16);
 $('#find-prev').innerHTML = icon('chevron-down', 16, 'flip');
 $('#find-prev').firstChild.style.transform = 'rotate(180deg)';
 $('#find-next').innerHTML = icon('chevron-down', 16);
@@ -124,6 +125,17 @@ $('#htabs').addEventListener(
 $('#panel-close').onclick = () => state?.panel && cmd('togglePanel', state.panel);
 
 const address = $('#address');
+
+let anchorKey = '';
+function reportAddressAnchor() {
+  const r = address.getBoundingClientRect();
+  const key = `${Math.round(r.right)}|${Math.round(r.bottom)}`;
+  if (key === anchorKey || !r.width) return;
+  anchorKey = key;
+  cmd('addressAnchor', r.right, r.bottom);
+}
+new ResizeObserver(reportAddressAnchor).observe(address);
+window.addEventListener('resize', reportAddressAnchor);
 address.onclick = () => cmd('openPalette', 'address');
 address.onkeydown = (e) => {
   if (e.key === 'Enter' || e.key === ' ') {
@@ -138,6 +150,11 @@ $('#addr-shield').onclick = (e) => {
 $('#addr-star').onclick = (e) => {
   e.stopPropagation();
   cmd('toggleBookmark');
+};
+$('#addr-key').onclick = (e) => {
+  e.stopPropagation();
+  const r = e.currentTarget.getBoundingClientRect();
+  cmd('passwordKey', r.left, r.bottom + 4);
 };
 $('#addr-reader').onclick = (e) => {
   e.stopPropagation();
@@ -180,6 +197,10 @@ function renderAddress(nav) {
   star.hidden = !nav || !nav.isWeb;
   star.classList.toggle('on', Boolean(nav && nav.bookmarked));
   star.title = nav && nav.bookmarked ? tr('Remove bookmark') : tr('Bookmark this page');
+  const keyBtn = $('#addr-key');
+  keyBtn.hidden = !nav || !nav.key;
+  keyBtn.classList.toggle('on', Boolean(nav && nav.key === 'pending'));
+  keyBtn.title = nav && nav.key === 'pending' ? tr('Save password') : tr('Passwords');
   const readerBtn = $('#addr-reader');
   readerBtn.hidden = !nav || !(nav.reader || (nav.isWeb && nav.readerable));
   readerBtn.classList.toggle('on', Boolean(nav && nav.reader));

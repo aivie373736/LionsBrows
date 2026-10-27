@@ -35,10 +35,16 @@ const PAGES = {
         <p><img src="/lion.png" onerror="window.pwned = 1" alt="A lion"></p><script>window.inlineRan = 1</script></article>
         <footer>Copyright</footer>`,
   '/opener': `<title>Opener</title><script>window.openedOk = () => !!window.opener;</script>`,
+  '/autoplay': `<title>Autoplay</title><video src="/background.webm"></video>`,
+  '/login': `<title>Sign in</title><form action="/two" method="get"><input id="user" name="u" type="email" autocomplete="username"><input id="pass" name="p" type="password" autocomplete="current-password"><button id="go" type="submit">Sign in</button></form>`,
   '/download': null,
 };
 
 const server = http.createServer((req, res) => {
+  if (req.url === '/background.webm') {
+    res.writeHead(200, { 'content-type': 'video/webm' });
+    return res.end(fs.readFileSync(path.join(root, 'test/fixtures/background.webm')));
+  }
   if (req.url === '/download') {
     res.writeHead(200, { 'content-type': 'application/octet-stream', 'content-disposition': 'attachment; filename="roar.txt"' });
     return res.end('ROAR '.repeat(1000));
@@ -316,6 +322,52 @@ await step('Widevine is available for protected content', async () => {
       .then(() => true, (err) => String(err)),
   );
   assert.equal(supported, true);
+});
+
+await step('passwords are offered for saving, filled in and listed in settings', async () => {
+  await main((ctx, r, w, url) => w.openUrl(url), `${BASE}/login`);
+  let page = await activePage(app, main);
+  await page.waitForSelector('#pass');
+  await page.fill('#user', 'leo@example.com');
+  await page.fill('#pass', 'roar-123');
+  await page.click('#go', { force: true });
+  const bubble = await pageFor(app, (u) => u.includes('/ui/bubble.html'));
+  await bubble.waitForSelector('#card:not([hidden])');
+  assert.match(await bubble.textContent('#title'), /127\.0\.0\.1/);
+  assert.equal(await bubble.inputValue('#username'), 'leo@example.com');
+  await wait(300);
+  shot('05c-save-password');
+  await bubble.click('#primary', { force: true });
+  await until(() => main((ctx) => ctx.passwords.list().length === 1), 'password saved');
+  assert.equal(await main((ctx) => ctx.passwords.list()[0].username), 'leo@example.com');
+  assert.equal(await main((ctx, r, w) => w.bubbleOpen), false);
+
+  await main((ctx, r, w, url) => w.openUrl(url), `${BASE}/login?again`);
+  page = await activePage(app, main);
+  await until(() => page.inputValue('#pass').then((v) => v === 'roar-123'), 'password filled in');
+  assert.equal(await page.inputValue('#user'), 'leo@example.com');
+  const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
+  await until(() => ui.$eval('#addr-key', (e) => !e.hidden), 'key icon shown');
+
+  await main((ctx, r, w) => w.newTab({ url: 'lions://settings/#passwords' }));
+  const settings = await activePage(app, main);
+  await settings.waitForSelector('#passwords .list-item.login');
+  assert.match(await settings.textContent('#passwords .list-item.login'), /leo@example\.com/);
+  assert.equal(await settings.evaluate((id) => window.lions.call('passwordReveal', id), await main((ctx) => ctx.passwords.list()[0].id)), 'roar-123');
+  await main((ctx, r, w) => r('./actions').run('history', w));
+  const hist = await pageFor(app, (u) => u.startsWith('lions://history'));
+  await assert.rejects(hist.evaluate(() => window.lions.call('passwordsInfo')));
+  await main((ctx, r, w, url) => w.openUrl(url), `${BASE}/two?after-passwords`);
+  await until(() => main((ctx, r, w) => w.activeTab().title === 'Page Two'), 'back on a web page');
+});
+
+await step('autoplay with sound is blocked by default', async () => {
+  await main((ctx, r, w, url) => w.openUrl(url), `${BASE}/autoplay`);
+  await until(() => main((ctx, r, w) => w.activeTab().title === 'Autoplay'), 'autoplay page');
+  const play = (muted) =>
+    main((ctx, r, w, m) => w.activeTab().wc.executeJavaScript(`(() => { const v = document.querySelector('video'); v.muted = ${m}; return v.play().then(() => 'played', (e) => e.name); })()`, false), muted);
+  assert.equal(await play(false), 'NotAllowedError');
+  assert.equal(await play(true), 'played');
 });
 
 await step('bookmarks', async () => {
