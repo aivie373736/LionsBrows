@@ -122,8 +122,8 @@ async function pageFor(app, predicate) {
 
 async function activePage(app, main) {
   const mark = `tab-${Date.now()}-${Math.random()}`;
-  await until(() => main((ctx, r, w, m) => w.activeTab().wc.executeJavaScript(`window.e2eMark = ${JSON.stringify(m)}; true`), mark), 'mark active tab');
   return until(async () => {
+    await main((ctx, r, w, m) => !w.activeTab().wc.isLoading() && w.activeTab().wc.executeJavaScript(`window.e2eMark = ${JSON.stringify(m)}; true`), mark);
     for (const p of app.windows()) {
       if ((await p.evaluate(() => window.e2eMark).catch(() => null)) === mark) return p;
     }
@@ -142,6 +142,13 @@ async function step(name, fn) {
   } catch (err) {
     results.push(['FAIL', name]);
     console.log(`  ✗ ${name}\n    ${err.stack || err}`);
+    await main((ctx) => {
+      for (const w of ctx.windows) {
+        w.hideBubble?.(false);
+        w.closePalette?.();
+        if (w.activeTab()) w.activeTab().pendingLogin = null;
+      }
+    }).catch(() => {});
   }
 }
 
@@ -397,7 +404,7 @@ await step('logins inside web components and two-step logins are captured and fi
   page = await open(`${BASE}/step1`);
   await page.fill('input[type="email"]', 'two.step@example.com');
   await page.click('button', { force: true });
-  await until(() => main((ctx, r, w) => w.activeTab().wc.getURL().includes('/step2')), 'second step');
+  await until(() => main((ctx, r, w) => w.activeTab().wc.getURL().includes('/step2') && !w.activeTab().wc.isLoading()), 'second step');
   page = await activePage(app, main);
   await page.fill('input[type="password"]', 'two-step-pw');
   await page.click('button', { force: true });
