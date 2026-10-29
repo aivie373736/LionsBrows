@@ -679,4 +679,6 @@
   'Reload to apply': 'Neu laden zum Übernehmen',
   'Permissions': 'Berechtigungen',
   'View site information': 'Website-Informationen anzeigen',
+  'Hide cookie banners': 'Cookie-Banner ausblenden',
+  'Rejects or hides cookie pop-ups where possible.': 'Lehnt Cookie-Pop-ups ab oder blendet sie aus, wo es geht.',
 });

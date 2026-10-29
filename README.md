@@ -21,7 +21,7 @@
 - **Search engine choice:** pick Google, DuckDuckGo, Bing, Brave Search, Ecosia, Startpage, Qwant, Yahoo or a custom engine, right from the new tab page.
 - **Personalization:** use your own video, image or a solid color as the new tab background. You can also choose the accent color and toolbar color, and switch between light and dark mode.
 - **Made for low-memory devices:** Memory saver puts inactive tabs to sleep and limits how many background tabs stay active. Low-memory mode uses fewer processes and smaller caches. Both turn on automatically on devices with 4 GB of RAM or less, and when the system runs low on memory, background tabs are suspended immediately. Settings shows memory usage per tab.
-- **Tracking protection:** built-in ad and tracker blocking with per-site exceptions, optional third-party cookie blocking, deleting cookies when the browser closes, automatic HTTPS upgrades, Global Privacy Control, blocking of autoplaying sound and private windows.
+- **Tracking protection:** built-in ad and tracker blocking with per-site exceptions, hidden cookie banners, optional third-party cookie blocking, deleting cookies when the browser closes, automatic HTTPS upgrades, Global Privacy Control, blocking of autoplaying sound and private windows. Click the lock in the address bar to see a site's connection, change its camera, microphone, location and notification permissions, or delete its cookies.
 - **First-start setup:** a short assistant on first launch to choose camera, microphone, location and notification permissions, Standard or Strict protection, what happens to cookies, importing from another browser and the look.
 - **Minimal by default:** the toolbar only shows back, forward, reload, the address bar and the menu. Downloads, split view and notes appear when you need them, and you can add buttons back with a right-click on the toolbar.
 - **Password manager:** offers to save logins, fills them in, and keeps them encrypted with Windows DPAPI, the macOS Keychain or the Linux keyring. Import and export CSV files from Chrome, Edge, Firefox, Brave and Bitwarden.
@@ -31,7 +31,7 @@
 - **Automatic updates:** new versions download in the background and install on restart.
 - **Streaming:** Netflix, Spotify, Disney+ and other services that use Widevine DRM, via castLabs' Electron for Content Security.
 - **English and German:** the language follows your system and can be changed in Settings.
-- **Everyday tools:** history, bookmarks with import and export, a download manager, find in page, zoom, full-page screenshots, a PDF viewer, spell check, session restore and a notes panel.
+- **Everyday tools:** history, recently closed tabs and windows, bookmarks with import and export, a download manager, find in page, zoom, full-page screenshots, a PDF viewer, spell check, session restore and a notes panel.
 
 <p align="center">
   <img src="docs/screenshots/settings-dark.png" width="430" alt="Settings in dark mode">

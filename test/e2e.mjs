@@ -29,6 +29,7 @@ const PAGES = {
         <script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
         <script src="https://www.google-analytics.com/analytics.js"></script>`,
   '/two': `<title>Page Two</title><p>second page</p>`,
+  '/cookies': `<title>Cookies</title><p>Lions everywhere</p><div id="cookie-banner">We use cookies. <button>Accept all</button></div>`,
   '/article': `<title>All about lions</title><header><nav><a href="/">Home</a> <a href="/two">Two</a></nav></header>
         <article><h1>All about lions</h1><p class="byline">By Leo Roar</p>
         ${Array.from({ length: 8 }, (_, i) => `<p>${'The lion is a large cat of the genus Panthera native to Africa and India. It has a muscular, broad-chested body, a short rounded head, round ears and a hairy tuft at the end of its tail. '.repeat(3)} Paragraph ${i + 1}.</p>`).join('')}
@@ -126,7 +127,7 @@ function shot(name) {
 async function launch() {
   const app = await playwright._electron.launch({
     executablePath: electronPath,
-    args: [root, '--no-sandbox'],
+    args: [root, '--no-sandbox', '--host-resolver-rules=MAP *.lions.test 127.0.0.1'],
     env: { ...process.env, LIONSBROWS_USER_DATA: profile, LIONSBROWS_TEST: '1' },
   });
   app.process().stderr.on('data', (d) => {
@@ -218,6 +219,23 @@ await step('ad blocker blocks known ad/tracker scripts', async () => {
   const blocked = await until(() => main((ctx, r, w) => w.activeTab().blocked), 'blocked count > 0', 30000);
   assert.ok(blocked >= 1);
   shot('02-page');
+});
+
+await step('cookie banners are hidden', async () => {
+  const url = BASE.replace('127.0.0.1', 'cookies.lions.test') + '/cookies';
+  await main((ctx, r, w, u) => w.newTab({ url: u }), url);
+  const page = await activePage(app, main);
+  const hidden = () => page.evaluate(() => getComputedStyle(document.getElementById('cookie-banner')).display === 'none');
+  await until(hidden, 'banner hidden');
+  await main((ctx) => ctx.setSetting('blockCookieBanners', false));
+  await until(async () => {
+    await page.reload();
+    await page.waitForSelector('#cookie-banner', { state: 'attached' });
+    await wait(300);
+    return !(await hidden());
+  }, 'banner shown when turned off', 60000);
+  await main((ctx) => ctx.setSetting('blockCookieBanners', true));
+  await main((ctx, r, w) => w.closeTab(w.activeTab().id));
 });
 
 await step('find in page counts matches', async () => {

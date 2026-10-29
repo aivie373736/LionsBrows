@@ -1,8 +1,8 @@
 'use strict';
 
 const PRESETS = {
-  standard: { blockThirdPartyCookies: false, defaultLocation: 'ask', defaultNotifications: 'ask', searchSuggestions: true, adblock: true, httpsUpgrade: true, gpc: true },
-  strict: { blockThirdPartyCookies: true, defaultLocation: 'block', defaultNotifications: 'block', searchSuggestions: false, adblock: true, httpsUpgrade: true, gpc: true },
+  standard: { blockThirdPartyCookies: false, defaultLocation: 'ask', defaultNotifications: 'ask', searchSuggestions: true, adblock: true, blockCookieBanners: true, httpsUpgrade: true, gpc: true },
+  strict: { blockThirdPartyCookies: true, defaultLocation: 'block', defaultNotifications: 'block', searchSuggestions: false, adblock: true, blockCookieBanners: true, httpsUpgrade: true, gpc: true },
 };
 
 let S = null;
@@ -98,6 +98,7 @@ function privacyStep() {
     ),
     row('Block third-party cookies', 'Stops other sites from following you through embedded content.', toggle('blockThirdPartyCookies')),
     row('Block ads and trackers', null, toggle('adblock')),
+    row('Hide cookie banners', 'Rejects or hides cookie pop-ups where possible.', toggle('blockCookieBanners')),
     row('Always use secure connections', 'Upgrade sites to HTTPS when possible.', toggle('httpsUpgrade')),
     row('Global Privacy Control', 'Tell websites not to sell or share your data.', toggle('gpc')),
     row('Search suggestions', 'Sends what you type in the address bar to your search engine.', toggle('searchSuggestions')),

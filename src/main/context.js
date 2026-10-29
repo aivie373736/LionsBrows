@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
   downloadsButton: 'auto',
   sidebarCollapsed: false,
   adblock: true,
+  blockCookieBanners: true,
   httpsUpgrade: true,
   gpc: true,
   cookies: 'keep',
