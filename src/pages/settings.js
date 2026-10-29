@@ -710,25 +710,42 @@ function downloads() {
 }
 
 async function extensions() {
-  const list = el('div', { class: 'mini-list' });
-  const render = (items) => {
-    list.textContent = '';
-    if (!items.length) list.append(row('No extensions installed', null, null));
-    for (const x of items) list.append(listRow(`${x.name} ${x.version}${x.missing ? ` (${tr('folder missing')})` : ''}`, tr('Remove'), async () => render(await api.call('extensionsRemove', x.dir))));
+  const list = el('div', { class: 'mini-list ext-list' });
+  const extRow = (x) => {
+    const pic = el('span', { class: 'ext-icon' });
+    if (x.icon) pic.append(el('img', { src: x.icon, alt: '' }));
+    else pic.innerHTML = icon('puzzle', 18);
+    const detail = x.missing ? tr('Folder missing') : x.description || (x.source === 'store' ? tr('From the Chrome Web Store') : tr('Unpacked extension'));
+    const text = el('div', { class: 'ext-text' }, el('div', { class: 'ext-name' }, x.name, el('span', { class: 'ext-version' }, x.version)), el('div', { class: 'ext-sub' }, detail));
+    const pinTitle = x.pinned ? tr('Unpin from toolbar') : tr('Pin to toolbar');
+    const pin = x.id ? el('button', { class: `icon-btn${x.pinned ? ' on' : ''}`, title: pinTitle, 'aria-label': pinTitle, 'aria-pressed': String(x.pinned), html: icon(x.pinned ? 'pin' : 'pin-off', 16), onclick: () => api.call('extensionsPin', x.id, !x.pinned) }) : null;
+    const options = x.options ? el('button', { class: 'icon-btn', title: tr('Options'), 'aria-label': tr('Options'), html: icon('settings', 16), onclick: () => api.call('extensionsOptions', x.id) }) : null;
+    const remove = el('button', { class: 'icon-btn', title: tr('Remove'), 'aria-label': tr('Remove'), html: icon('trash-2', 16), onclick: () => api.call('extensionsRemove', x.key) });
+    return el('div', { class: 'list-item ext' }, pic, text, options, pin, remove);
   };
-  render(await api.call('extensionsList'));
+  const render = async () => {
+    const items = await api.call('extensionsList');
+    list.replaceChildren(...(items.length ? items.map(extRow) : [row('No extensions yet', 'Find one in the Chrome Web Store and click “Add to LionsBrows”.', null)]));
+  };
+  await render();
+  api.on((name) => name === 'extensions-changed' && render());
+
+  const store = el('button', { class: 'button primary' }, tr('Open Chrome Web Store'));
+  store.onclick = () => api.call('extensionsStore');
   const add = el('button', { class: 'button' }, tr('Load unpacked'));
   add.onclick = async () => {
     try {
-      render(await api.call('extensionsAdd'));
+      await api.call('extensionsAdd');
     } catch (err) {
       toast(tr('Couldn’t load extension: {error}', { error: errorText(err) }));
     }
   };
   return section(
     'extensions',
-    'Experimental. Load an unpacked Chrome extension folder. Only part of the Chrome extension APIs is available.',
-    panel('Installed', 'puzzle', card(row('Unpacked extensions', 'Takes effect in new windows.', add), list)),
+    'Add extensions from the Chrome Web Store. Most extensions work, but a few Chrome features are not available yet.',
+    panel('Chrome Web Store', 'store', card(row('Get extensions', 'Open an extension in the store and click “Add to LionsBrows”. Extensions update automatically.', store))),
+    panel('Installed', 'puzzle', card(list)),
+    panel('Developers', 'code', card(row('Load unpacked', 'Load an extension folder from your computer.', add))),
   );
 }
 

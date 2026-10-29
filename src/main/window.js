@@ -277,6 +277,7 @@ class BrowserWin {
     if (this.find.open) this.closeFind(false);
     if (this.bubbleOpen && this.bubbleTab !== tab.id) this.hideBubble(false);
     this.layout();
+    require('./extensions').selected(tab);
     if (!this.overlayOpen) this.focusActive();
     this.scheduleState();
     this.scheduleSave();
@@ -793,6 +794,7 @@ class BrowserWin {
         isWeb,
         bookmarked: bookmarks.has(url),
         adblockOn: isWeb && ctx.settings().adblock && !adblock.isAllowlisted(url),
+        storeOffer: require('./extensions').storeOffer(this),
       };
     }
     const settings = ctx.settings();
@@ -828,6 +830,7 @@ class BrowserWin {
       },
       downloadList: this.panel === 'downloads' ? downloads.list().slice(0, 40) : [],
       canReopen: this.closed.length > 0,
+      extensions: require('./extensions').toolbar(this),
       update: update.status === 'ready' || update.status === 'available' ? { status: update.status, version: update.version } : null,
     };
   }

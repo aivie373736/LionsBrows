@@ -386,6 +386,57 @@ input[type='checkbox'] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.list-item.ext {
+  height: auto;
+  min-height: 64px;
+  gap: 14px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.ext-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+.ext-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.ext-text {
+  flex: 1;
+  min-width: 0;
+}
+.ext-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ext-version {
+  margin-left: 8px;
+  font-weight: 400;
+  font-size: 12.5px;
+  color: var(--text-3, var(--text-2));
+}
+.ext-sub {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.list-item.ext .icon-btn.on {
+  color: var(--accent);
+}
+
 .pill-tag {
   font-size: 12.5px;
   padding: 3px 10px;

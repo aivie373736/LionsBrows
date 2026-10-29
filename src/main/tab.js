@@ -100,6 +100,7 @@ class Tab {
     this.view.setBorderRadius?.(10);
     this.#syncBackground(this.url);
     this.#wire(this.view.webContents);
+    require('./extensions').track(this);
   }
 
   #syncBackground(url) {

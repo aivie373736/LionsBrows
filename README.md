@@ -25,6 +25,7 @@
 - **First-start setup:** a short assistant on first launch to choose camera, microphone, location and notification permissions, Standard or Strict protection, what happens to cookies, importing from another browser and the look.
 - **Minimal by default:** the toolbar only shows back, forward, reload, the address bar and the menu. Downloads, split view and notes appear when you need them, and you can add buttons back with a right-click on the toolbar.
 - **Password manager:** offers to save logins, fills them in, and keeps them encrypted with Windows DPAPI, the macOS Keychain or the Linux keyring. Import and export CSV files from Chrome, Edge, Firefox, Brave and Bitwarden.
+- **Chrome extensions:** add extensions straight from the Chrome Web Store. They appear in the toolbar with their popups and badges, update automatically, and can be pinned or removed with a right-click. Packages are checked against the developer's signature before they are installed.
 - **Reader view:** one click turns cluttered articles into clean text, with font, size and light, sepia or dark themes.
 - **Import from other browsers:** bring over bookmarks and history from Chrome, Edge, Brave, Vivaldi, Opera and Firefox.
 - **Automatic updates:** new versions download in the background and install on restart.
@@ -112,7 +113,7 @@ LionsBrows uses [Electron for Content Security](https://github.com/castlabs/elec
 
 ### Known limitations
 
-- Chrome Web Store extensions cannot be installed directly. Unpacked extensions can be loaded from *Settings → Extensions* (experimental).
+- Extensions get the Chrome APIs that Electron and [electron-chrome-extensions](https://github.com/samuelmaddock/electron-browser-shell) provide. Most extensions work, but `chrome.webRequest` listeners are not called and some newer APIs are missing, so a few extensions only work partly. Extensions do not run in private windows.
 - There is no sync between devices.
 - Some streaming services only play in builds that are VMP-signed with a castLabs EVS account (see below).
 - Automatic updates need the GitHub releases to be public.

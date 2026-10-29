@@ -91,6 +91,16 @@ function removeHeader(headers, name) {
   return removed;
 }
 
+function storeHints(details, headers) {
+  if (!details.url.startsWith('https://chromewebstore.google.com/')) return;
+  for (const key of Object.keys(headers)) {
+    const name = key.toLowerCase();
+    if (name === 'sec-ch-ua' || name === 'sec-ch-ua-full-version-list') {
+      if (!headers[key].includes('"Google Chrome"')) headers[key] = headers[key].replace(/"Chromium";v="([^"]+)"/, '"Google Chrome";v="$1", "Chromium";v="$1"');
+    }
+  }
+}
+
 function persistent() {
   const parts = new Set(['persist:main', ...ctx.workspaces().filter((w) => w.isolated).map((w) => `persist:ws-${w.id}`)]);
   return [...parts].map((p) => session.fromPartition(p));
@@ -128,6 +138,7 @@ function setup(ses, { isPrivate = false } = {}) {
     const headers = details.requestHeaders;
     if (ctx.settings().gpc && details.url.startsWith('http')) headers['Sec-GPC'] = '1';
     if (thirdParty(details)) removeHeader(headers, 'cookie');
+    storeHints(details, headers);
     callback({ requestHeaders: headers });
   });
 

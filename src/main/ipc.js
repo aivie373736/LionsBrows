@@ -8,6 +8,7 @@ const downloads = require('./downloads');
 const internalApi = require('./internal-api');
 const { run, openInternal } = require('./actions');
 const logins = require('./logins');
+const extensions = require('./extensions');
 
 const privateNotes = new Map();
 
@@ -67,6 +68,10 @@ const UI = {
   openDownloadsPage: (w) => openInternal(w, 'downloads'),
   settings: (w) => run('settings', w),
   reopenTab: (w) => w.reopenClosed(),
+  extensionClick: (w, id, rect) => extensions.activate(w, String(id), rect || {}),
+  extensionMenu: (w, id, x, y) => menus.extensionMenu(w, String(id), x, y),
+  extensionsMenu: (w, rect) => menus.extensionsMenu(w, rect || {}),
+  extensionInstall: (w) => extensions.installFromPage(w),
 };
 
 const BUBBLE = {
@@ -127,6 +132,7 @@ function init() {
   });
   ipcMain.handle('lions:call', (event, method, ...args) => internalApi.call(event, method, ...args));
   logins.init();
+  extensions.init();
 }
 
 module.exports = { init };

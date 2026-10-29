@@ -1,6 +1,6 @@
 'use strict';
 
-const { Menu, clipboard, dialog, app } = require('electron');
+const { Menu, clipboard, dialog, app, nativeImage } = require('electron');
 const { ctx } = require('./context');
 const { engine, searchUrl } = require('./search-engines');
 const omnibox = require('./omnibox');
@@ -126,6 +126,9 @@ function pageMenu(tab, params) {
     );
   }
 
+  const extensionItems = require('./extensions').contextMenuItems(tab, params);
+  if (extensionItems.length) t.push(...extensionItems, SEP);
+
   t.push({ label: tr('Inspect'), click: () => wc.inspectElement(params.x, params.y) });
   popup(w, t, { frame: params.frame });
 }
@@ -182,6 +185,73 @@ function toolbarMenu(w, x, y) {
   );
 }
 
+function menuIcon(dataUrl) {
+  if (!dataUrl) return undefined;
+  const image = nativeImage.createFromDataURL(dataUrl);
+  return image.isEmpty() ? undefined : image.resize({ width: 16, height: 16, quality: 'best' });
+}
+
+function extensionsSubmenu(w) {
+  const { STORE_ORIGIN } = require('./extensions');
+  return {
+    label: tr('Extensions'),
+    submenu: [
+      { label: tr('Manage extensions'), click: () => w.newTab({ url: 'lions://settings/#extensions' }) },
+      { label: tr('Chrome Web Store'), click: () => w.newTab({ url: `${STORE_ORIGIN}/category/extensions` }) },
+    ],
+  };
+}
+
+function extensionsMenu(w, rect) {
+  const extensions = require('./extensions');
+  const r = { x: Number(rect.x) || 0, y: Number(rect.y) || 0, width: Number(rect.width) || 0, height: Number(rect.height) || 0 };
+  const items = extensions.toolbar(w);
+  popup(
+    w,
+    [
+      ...items.map((x) => ({ label: short(x.name, 40), icon: menuIcon(x.icon), click: () => extensions.activate(w, x.id, r) })),
+      SEP,
+      items.length
+        ? { label: tr('Show in toolbar'), submenu: items.map((x) => ({ label: short(x.name, 40), type: 'checkbox', checked: x.pinned, click: () => extensions.setPinned(x.id, !x.pinned) })) }
+        : null,
+      ...extensionsSubmenu(w).submenu,
+    ],
+    { x: Math.max(0, Math.round(r.x + r.width - 260)), y: Math.round(r.y + r.height + 4) },
+  );
+}
+
+async function confirmRemoveExtension(w, id, name) {
+  const { response } = await dialog.showMessageBox(w.win, {
+    type: 'question',
+    message: tr('Remove “{name}”?', { name }),
+    buttons: [tr('Remove'), tr('Cancel')],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+  });
+  if (response === 0) require('./extensions').remove(id);
+}
+
+function extensionMenu(w, id, x, y) {
+  const extensions = require('./extensions');
+  const item = extensions.toolbar(w).find((e) => e.id === id);
+  if (!item) return;
+  const info = extensions.list().find((e) => e.id === id);
+  popup(
+    w,
+    [
+      { label: short(item.name, 40), enabled: false },
+      SEP,
+      info?.options ? { label: tr('Options'), click: () => extensions.openOptions(w, id) } : null,
+      { label: item.pinned ? tr('Unpin from toolbar') : tr('Pin to toolbar'), click: () => extensions.setPinned(id, !item.pinned) },
+      { label: tr('Remove from LionsBrows…'), click: () => confirmRemoveExtension(w, id, item.name) },
+      SEP,
+      { label: tr('Manage extensions'), click: () => w.newTab({ url: 'lions://settings/#extensions' }) },
+    ],
+    { x: Math.round(x), y: Math.round(y) },
+  );
+}
+
 function workspacesSubmenu(w) {
   if (w.isPrivate) return null;
   return {
@@ -219,6 +289,7 @@ function mainMenu(w, x, y) {
       { label: tr('Bookmarks'), ...acc('bookmarksPage'), click: () => run('bookmarksPage', w) },
       { label: tr('Downloads'), ...acc('downloads'), click: () => run('downloads', w) },
       { label: tr('Notes'), ...acc('notes'), click: () => run('notes', w) },
+      w.isPrivate ? null : extensionsSubmenu(w),
       workspacesSubmenu(w),
       SEP,
       {
@@ -457,4 +528,4 @@ function installAppMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-module.exports = { pageMenu, tabMenu, mainMenu, toolbarMenu, passwordMenu, shieldMenu, workspaceMenu, workspaceSwitcher, allTabsMenu, bookmarkMenu, installAppMenu, openInternal };
+module.exports = { pageMenu, tabMenu, mainMenu, toolbarMenu, extensionMenu, extensionsMenu, passwordMenu, shieldMenu, workspaceMenu, workspaceSwitcher, allTabsMenu, bookmarkMenu, installAppMenu, openInternal };

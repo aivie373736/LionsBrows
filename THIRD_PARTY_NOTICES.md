@@ -36,6 +36,14 @@ Ad and tracker blocking uses [@ghostery/adblocker](https://github.com/ghostery/a
 
 Reader view uses [Readability](https://github.com/mozilla/readability) by Mozilla, licensed under Apache-2.0.
 
+## electron-chrome-extensions
+
+Chrome extension support uses [electron-chrome-extensions](https://github.com/samuelmaddock/electron-browser-shell) by Samuel Maddock (MIT).
+
+## fflate
+
+Extension packages are unpacked with [fflate](https://github.com/101arrowz/fflate) (MIT).
+
 ## electron-updater
 
 Automatic updates use [electron-updater](https://github.com/electron-userland/electron-builder) (MIT).

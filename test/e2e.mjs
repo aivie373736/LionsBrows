@@ -45,7 +45,42 @@ const PAGES = {
   '/download': null,
 };
 
+function signedPackage(files) {
+  const crypto = require('node:crypto');
+  const { zipSync, strToU8 } = require('fflate');
+  const varint = (n) => {
+    const out = [];
+    for (; n > 127; n = Math.floor(n / 128)) out.push((n & 127) | 128);
+    return Buffer.from([...out, n]);
+  };
+  const field = (num, bytes) => Buffer.concat([varint(num * 8 + 2), varint(bytes.length), bytes]);
+  const u32 = (n) => {
+    const b = Buffer.alloc(4);
+    b.writeUInt32LE(n);
+    return b;
+  };
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const key = publicKey.export({ type: 'spki', format: 'der' });
+  const signedData = field(1, crypto.createHash('sha256').update(key).digest().subarray(0, 16));
+  const archive = Buffer.from(zipSync(Object.fromEntries(Object.entries(files).map(([name, data]) => [name, typeof data === 'string' ? strToU8(data) : new Uint8Array(data)]))));
+  const signature = crypto.sign('sha256', Buffer.concat([Buffer.from('CRX3 SignedData\x00', 'latin1'), u32(signedData.length), signedData, archive]), privateKey);
+  const header = Buffer.concat([field(2, Buffer.concat([field(1, key), field(2, signature)])), field(10000, signedData)]);
+  const id = require(path.join(root, 'src/main/crx.js')).idFromKey(key);
+  return { id, buf: Buffer.concat([Buffer.from('Cr24'), u32(3), u32(header.length), header, archive]) };
+}
+
+const ROAR = signedPackage({
+  'manifest.json': JSON.stringify({ manifest_version: 3, name: 'Roar Counter', version: '1.0.0', description: 'Counts roars', action: { default_popup: 'popup.html', default_title: 'Roar Counter' }, icons: { 48: 'icon.png' } }),
+  'icon.png': fs.readFileSync(path.join(root, 'src/shared/icon.png')),
+  'popup.html': '<!doctype html><meta charset="utf-8"><body style="width:220px;height:90px;margin:0">Roar!<script src="popup.js"></script></body>',
+  'popup.js': "chrome.action.setBadgeText({ text: '7' }); document.body.dataset.ready = '1';",
+});
+
 const server = http.createServer((req, res) => {
+  if (req.url === '/roar.crx') {
+    res.writeHead(200, { 'content-type': 'application/x-chrome-extension' });
+    return res.end(ROAR.buf);
+  }
   if (req.url === '/background.webm') {
     res.writeHead(200, { 'content-type': 'video/webm' });
     return res.end(fs.readFileSync(path.join(root, 'test/fixtures/background.webm')));
@@ -549,6 +584,29 @@ await step('settings and history pages render', async () => {
   await settings.waitForSelector('#performance .mem-value');
   await wait(400);
   shot('13-settings');
+});
+
+await step('extensions install from a signed package, sit in the toolbar and open their popup', async () => {
+  await main((ctx, r, w, a) => r('./extensions').installFromStore(a.id, a.url), { id: ROAR.id, url: `${BASE}/roar.crx` });
+  const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
+  await until(async () => (await ui.$$('#ext-pinned button img')).length === 1, 'extension button with its icon');
+  assert.equal(await ui.getAttribute('#ext-pinned button', 'title'), 'Roar Counter');
+  assert.equal(await ui.isVisible('#btn-extensions'), true);
+  await ui.click('#ext-pinned button');
+  const popup = await pageFor(app, (u) => u.startsWith(`chrome-extension://${ROAR.id}/popup.html`));
+  await until(() => popup.evaluate(() => document.body.dataset.ready === '1'), 'popup script ran');
+  await until(() => main(() => require('electron').BrowserWindow.getAllWindows().some((b) => b.isVisible() && b.webContents.getURL().includes('/popup.html'))), 'popup is shown');
+  await until(async () => (await ui.textContent('#ext-pinned .ext-badge').catch(() => '')) === '7', 'badge set by the extension');
+  await wait(300);
+  shot('16b-extension-popup');
+  await main(() => require('electron').BrowserWindow.getAllWindows().forEach((b) => b.webContents.getURL().includes('/popup.html') && b.destroy()));
+  const listed = await main((ctx, r) => r('./extensions').list());
+  assert.deepEqual([listed.length, listed[0].name, listed[0].source, listed[0].version], [1, 'Roar Counter', 'store', '1.0.0']);
+  await main((ctx, r, w, id) => r('./extensions').setPinned(id, false), ROAR.id);
+  await until(async () => (await ui.$$('#ext-pinned button')).length === 0, 'unpinned');
+  await main((ctx, r, w, id) => r('./extensions').remove(id), ROAR.id);
+  await until(async () => !(await ui.isVisible('#btn-extensions')), 'extension removed');
+  assert.deepEqual(await main((ctx, r) => r('./extensions').list()), []);
 });
 
 await step('first-start setup applies privacy choices', async () => {

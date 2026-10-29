@@ -112,6 +112,7 @@ const ctx = {
       adblockAllowlist: [],
       httpOnlyHosts: [],
       extensions: [],
+      unpinnedExtensions: [],
       stats: { blocked: 0, since: Date.now() },
       siteDataCleared: false,
     });

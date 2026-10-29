@@ -149,4 +149,105 @@ if (location.protocol === 'lions:') {
   ipcRenderer.on('lions:password-fill', (_event, login) => {
     if (login && login.origin === location.origin) fill(login);
   });
+
+  if (location.origin === 'https://chromewebstore.google.com') {
+    const values = (list) => Object.fromEntries(list.map((v) => [v.toUpperCase(), v]));
+    let notify = null;
+    ipcRenderer.on('lions:webstore-event', (_event, name, data) => notify && notify(name, data));
+    contextBridge.executeInMainWorld({
+      func: (bridge) => {
+        const chrome = window.chrome || (window.chrome = {});
+        const runtime = chrome.runtime || (chrome.runtime = {});
+        const management = chrome.management || (chrome.management = {});
+        const setError = (message) => {
+          const value = message ? { message } : undefined;
+          chrome.extension = chrome.extension || {};
+          try {
+            chrome.extension.lastError = value;
+            runtime.lastError = value;
+          } catch {
+            return;
+          }
+        };
+        const wrap =
+          (method, pick = (v) => v, error = () => null) =>
+          (...args) => {
+            const callback = typeof args[args.length - 1] === 'function' ? args.pop() : null;
+            return bridge.call(method, args).then((reply) => {
+              setError(error(reply));
+              const value = pick(reply);
+              if (callback) callback(value);
+              return value;
+            });
+          };
+        const store = Object.assign({}, bridge.enums);
+        for (const method of bridge.methods) store[method] = wrap(method);
+        store.beginInstallWithManifest3 = wrap(
+          'beginInstallWithManifest3',
+          (r) => r.result,
+          (r) => (r.result === 'success' ? null : r.message || r.result),
+        );
+        chrome.webstorePrivate = store;
+        const listeners = { onInstalled: new Set(), onUninstalled: new Set() };
+        for (const [name, set] of Object.entries(listeners)) {
+          management[name] = { addListener: (fn) => set.add(fn), removeListener: (fn) => set.delete(fn), hasListener: (fn) => set.has(fn) };
+        }
+        bridge.subscribe((name, data) => listeners[name] && listeners[name].forEach((fn) => fn(data)));
+        for (const method of ['getAll', 'get', 'setEnabled', 'uninstall']) management[method] = wrap(`management.${method}`);
+        if (!runtime.getManifest) runtime.getManifest = () => ({});
+      },
+      args: [
+        {
+          methods: [
+            'completeInstall',
+            'enableAppLauncher',
+            'getBrowserLogin',
+            'getExtensionStatus',
+            'getFullChromeVersion',
+            'getIsLauncherEnabled',
+            'getMV2DeprecationStatus',
+            'getReferrerChain',
+            'getStoreLogin',
+            'getWebGLStatus',
+            'install',
+            'isInIncognitoMode',
+            'isPendingCustodianApproval',
+            'setStoreLogin',
+          ],
+          enums: {
+            ExtensionInstallStatus: values(['blacklisted', 'blocked_by_policy', 'can_request', 'corrupted', 'custodian_approval_required', 'custodian_approval_required_for_installation', 'deprecated_manifest_version', 'disabled', 'enabled', 'force_installed', 'installable', 'request_pending', 'terminated']),
+            MV2DeprecationStatus: values(['inactive', 'soft_disable', 'warning']),
+            Result: values(['already_installed', 'blacklisted', 'blocked_by_policy', 'blocked_for_child_account', 'feature_disabled', 'icon_error', 'install_error', 'install_in_progress', 'invalid_icon_url', 'invalid_id', 'launch_in_progress', 'manifest_error', 'missing_dependencies', 'success', 'unknown_error', 'unsupported_extension_type', 'user_cancelled', 'user_gesture_required']),
+            WebGlStatus: values(['webgl_allowed', 'webgl_blocked']),
+          },
+          call: (method, args) => ipcRenderer.invoke('lions:webstore', method, ...args),
+          subscribe: (fn) => {
+            notify = fn;
+          },
+        },
+      ],
+    });
+
+    const BRANDED = new Map([
+      ['Add to Chrome', 'Add to LionsBrows'],
+      ['Remove from Chrome', 'Remove from LionsBrows'],
+      ['Zu Chrome hinzufügen', 'Zu LionsBrows hinzufügen'],
+      ['Aus Chrome entfernen', 'Aus LionsBrows entfernen'],
+    ]);
+    const rebrand = () => {
+      for (const node of document.querySelectorAll('button span')) {
+        const text = !node.childElementCount && BRANDED.get(node.textContent.trim());
+        if (text) node.textContent = text;
+      }
+    };
+    let queued = false;
+    new MutationObserver(() => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        rebrand();
+      });
+    }).observe(document, { childList: true, subtree: true, characterData: true });
+  }
 }

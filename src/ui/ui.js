@@ -24,6 +24,7 @@ $('#btn-downloads').innerHTML =
   icon('download') +
   '<svg class="ring" viewBox="0 0 26 26" style="display:none"><circle class="track" cx="13" cy="13" r="11"/><circle class="bar" cx="13" cy="13" r="11" stroke-dasharray="69.12" stroke-dashoffset="69.12"/></svg>';
 $('#btn-menu').innerHTML = icon('ellipsis');
+$('#btn-extensions').innerHTML = icon('puzzle');
 $('#hnew').innerHTML = icon('plus');
 $('#btn-alltabs').innerHTML = icon('chevron-down', 16);
 $('#btn-settings').innerHTML = icon('settings');
@@ -84,6 +85,11 @@ function anchor(button, alignRight = false) {
   return [alignRight ? r.right - 240 : r.left, r.bottom + 4];
 }
 
+function rectOf(element) {
+  const r = element.getBoundingClientRect();
+  return { x: r.left, y: r.top, width: r.width, height: r.height };
+}
+
 $('#btn-sidebar').onclick = () => cmd('toggleSidebar');
 $('#btn-back').onclick = () => cmd('back');
 $('#btn-forward').onclick = () => cmd('forward');
@@ -93,6 +99,7 @@ $('#btn-notes').onclick = () => cmd('togglePanel', 'notes');
 $('#btn-downloads').onclick = () => cmd('togglePanel', 'downloads');
 $('#btn-menu').onclick = (e) => cmd('mainMenu', ...anchor(e.currentTarget, true));
 $('#btn-settings').onclick = () => cmd('settings');
+$('#btn-extensions').onclick = (e) => cmd('extensionsMenu', rectOf(e.currentTarget));
 $('#new-tab').onclick = () => cmd('newTab');
 $('#hnew').onclick = () => cmd('newTab');
 $('#btn-alltabs').onclick = (e) => cmd('allTabsMenu', ...anchor(e.currentTarget, true));
@@ -160,6 +167,10 @@ $('#addr-reader').onclick = (e) => {
   e.stopPropagation();
   cmd('toggleReader');
 };
+$('#addr-addext').onclick = (e) => {
+  e.stopPropagation();
+  cmd('extensionInstall');
+};
 $('#addr-zoom').onclick = (e) => {
   e.stopPropagation();
   cmd('zoomReset');
@@ -205,9 +216,54 @@ function renderAddress(nav) {
   readerBtn.hidden = !nav || !(nav.reader || (nav.isWeb && nav.readerable));
   readerBtn.classList.toggle('on', Boolean(nav && nav.reader));
   readerBtn.title = nav && nav.reader ? tr('Close reader view') : tr('Reader view');
+  const offer = nav && nav.storeOffer;
+  const addExt = $('#addr-addext');
+  addExt.hidden = !offer;
+  addExt.disabled = Boolean(offer && offer.busy);
+  const offerKey = offer ? String(offer.busy) : '';
+  if (addExt.dataset.key !== offerKey) {
+    addExt.dataset.key = offerKey;
+    addExt.innerHTML = offer ? `${icon('puzzle', 14)}<span>${offer.busy ? tr('Adding…') : tr('Add to LionsBrows')}</span>` : '';
+  }
   const zoom = $('#addr-zoom');
   zoom.hidden = !nav || nav.zoom === 100;
   if (nav) zoom.textContent = `${nav.zoom}%`;
+}
+
+let extensionsKey = '';
+function renderExtensions(list) {
+  const pinned = list.filter((x) => x.pinned);
+  const key = JSON.stringify(pinned);
+  $('#btn-extensions').hidden = !list.length;
+  if (key === extensionsKey) return;
+  extensionsKey = key;
+  $('#ext-pinned').replaceChildren(
+    ...pinned.map((x) => {
+      const b = el('button', 'btn ext');
+      b.title = x.title;
+      b.dataset.id = x.id;
+      if (x.icon) {
+        const img = el('img');
+        img.src = x.icon;
+        img.alt = '';
+        b.append(img);
+      } else {
+        b.innerHTML = icon('puzzle', 16);
+      }
+      if (x.badge) {
+        const badge = el('span', 'ext-badge', x.badge);
+        if (x.badgeColor) badge.style.background = x.badgeColor;
+        b.append(badge);
+      }
+      b.onclick = () => cmd('extensionClick', x.id, rectOf(b));
+      b.oncontextmenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        cmd('extensionMenu', x.id, e.clientX, e.clientY);
+      };
+      return b;
+    }),
+  );
 }
 
 function renderToolbar() {
@@ -229,6 +285,7 @@ function renderToolbar() {
   $('#btn-notes').classList.toggle('on', s.panel === 'notes');
   $('#btn-downloads').classList.toggle('on', s.panel === 'downloads');
   $('#private-chip').hidden = !s.isPrivate;
+  renderExtensions(s.extensions || []);
   $('#btn-menu').classList.toggle('badge', Boolean(s.update));
   $('#btn-menu').title = s.update ? (s.update.status === 'ready' ? tr('Restart to update to {version}', s.update) : tr('LionsBrows {version} is available', s.update)) : tr('Open menu');
 

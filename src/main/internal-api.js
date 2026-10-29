@@ -273,13 +273,22 @@ const API = {
   async extensionsAdd(sender) {
     const { w } = findTab(sender);
     const { canceled, filePaths } = await dialog.showOpenDialog(w?.win, { title: tr('Choose an unpacked extension folder'), properties: ['openDirectory'] });
-    if (canceled || !filePaths[0]) return extensions.list();
-    await extensions.add(filePaths[0], persistentSessions());
+    if (!canceled && filePaths[0]) await extensions.addUnpacked(filePaths[0]);
     return extensions.list();
   },
-  extensionsRemove(_s, dir) {
-    extensions.remove(dir, persistentSessions());
+  extensionsRemove(_s, key) {
+    extensions.remove(String(key));
     return extensions.list();
+  },
+  extensionsPin(_s, id, pinned) {
+    extensions.setPinned(String(id), Boolean(pinned));
+    return extensions.list();
+  },
+  extensionsOptions(sender, id) {
+    extensions.openOptions(findTab(sender).w, String(id));
+  },
+  extensionsStore(sender) {
+    findTab(sender).w?.newTab({ url: `${extensions.STORE_ORIGIN}/category/extensions` });
   },
 
   about() {

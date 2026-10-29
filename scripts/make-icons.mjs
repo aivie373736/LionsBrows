@@ -15,7 +15,7 @@ const ICONS = [
   'moon-star', 'circle-check', 'circle-x', 'upload', 'info', 'monitor', 'palette', 'keyboard', 'zoom-in',
   'menu', 'image', 'film', 'check', 'sliders-horizontal', 'pencil', 'list', 'paintbrush',
   'book-open', 'import', 'refresh-cw', 'circle-arrow-up', 'languages', 'key-round', 'eye',
-  'minus', 'sun-moon',
+  'minus', 'sun-moon', 'store', 'code', 'cookie', 'camera', 'mic', 'map-pin', 'bell', 'undo-2', 'lock-open', 'ban',
 ];
 
 const lucideDir = path.join(path.dirname(require.resolve('lucide-static/package.json')), 'icons');
