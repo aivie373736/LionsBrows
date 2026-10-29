@@ -167,6 +167,11 @@ $('#addr-reader').onclick = (e) => {
   e.stopPropagation();
   cmd('toggleReader');
 };
+$('#addr-icon').onclick = (e) => {
+  if (!state?.nav?.isWeb) return;
+  e.stopPropagation();
+  cmd('siteInfo', rectOf(e.currentTarget));
+};
 $('#addr-addext').onclick = (e) => {
   e.stopPropagation();
   cmd('extensionInstall');
@@ -181,6 +186,7 @@ function renderAddress(nav) {
   const text = $('#addr-text');
   text.textContent = '';
   ico.className = '';
+  ico.title = '';
   if (!nav || !nav.display) {
     ico.innerHTML = icon('search', 15);
     text.append(el('span', 'placeholder', tr('Search or enter address')));
@@ -190,6 +196,7 @@ function renderAddress(nav) {
   } else {
     ico.className = nav.secure ? 'secure' : 'warn';
     ico.innerHTML = nav.secure ? icon('lock', 14) : icon('triangle-alert', 14);
+    ico.title = nav.isWeb ? tr('View site information') : '';
     const slash = nav.display.indexOf('/');
     const host = slash === -1 ? nav.display : nav.display.slice(0, slash);
     const rest = slash === -1 ? '' : nav.display.slice(slash);

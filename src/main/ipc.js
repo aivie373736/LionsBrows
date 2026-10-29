@@ -9,6 +9,8 @@ const internalApi = require('./internal-api');
 const { run, openInternal } = require('./actions');
 const logins = require('./logins');
 const extensions = require('./extensions');
+const permissions = require('./permissions');
+const { getDomain } = require('tldts');
 
 const privateNotes = new Map();
 
@@ -67,11 +69,16 @@ const UI = {
   download: (w, id, action) => downloads.action(id, action),
   openDownloadsPage: (w) => openInternal(w, 'downloads'),
   settings: (w) => run('settings', w),
-  reopenTab: (w) => w.reopenClosed(),
+  reopenTab: (w) => run('reopenTab', w),
   extensionClick: (w, id, rect) => extensions.activate(w, String(id), rect || {}),
   extensionMenu: (w, id, x, y) => menus.extensionMenu(w, String(id), x, y),
   extensionsMenu: (w, rect) => menus.extensionsMenu(w, rect || {}),
   extensionInstall: (w) => extensions.installFromPage(w),
+  siteInfo: (w, rect) => {
+    if (w.bubbleOpen && w.bubbleKind === 'site') return w.hideBubble();
+    if (Date.now() - (w.siteHiddenAt || 0) < 300) return undefined;
+    return w.showSiteBubble(rect || {});
+  },
 };
 
 const BUBBLE = {
@@ -93,6 +100,29 @@ const BUBBLE = {
     w.hideBubble();
   },
   close: (w) => w.hideBubble(),
+  sitePermission: (w, kind, value) => {
+    const origin = permissions.originOf(w.activeTab()?.displayUrl || '');
+    if (!/^https?:/.test(origin)) return null;
+    return permissions.setSite(origin, w.isPrivate, String(kind), String(value));
+  },
+  siteClear: async (w) => {
+    const tab = w.activeTab();
+    if (!tab?.wc || !/^https?:/.test(tab.displayUrl)) return false;
+    const { origin, host } = new URL(tab.displayUrl);
+    const ses = tab.wc.session;
+    const cookies = await ses.cookies.get({ domain: getDomain(host) || host }).catch(() => []);
+    await Promise.all(cookies.map((c) => ses.cookies.remove(`http${c.secure ? 's' : ''}://${c.domain.replace(/^\./, '')}${c.path}`, c.name).catch(() => {})));
+    await ses.clearStorageData({ origin, storages: ['localstorage', 'indexdb', 'websql', 'serviceworkers', 'cachestorage', 'filesystem'] }).catch(() => {});
+    return true;
+  },
+  siteReload: (w) => {
+    w.activeTab()?.reload();
+    w.hideBubble();
+  },
+  siteSettings: (w) => {
+    w.hideBubble(false);
+    w.newTab({ url: 'lions://settings/#privacy' });
+  },
 };
 
 const OVERLAY = {

@@ -586,6 +586,26 @@ await step('settings and history pages render', async () => {
   shot('13-settings');
 });
 
+await step('the site panel shows the connection and changes permissions for the site', async () => {
+  await main((ctx, r, w, url) => w.openUrl(url), `${BASE}/two`);
+  await activePage(app, main);
+  const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
+  await ui.click('#addr-icon');
+  const bubble = await pageFor(app, (u) => u.includes('/ui/bubble.html'));
+  await until(() => bubble.isVisible('#site'), 'site panel');
+  assert.equal(await bubble.textContent('#site-title'), new URL(BASE).host);
+  assert.equal(await bubble.textContent('#site-status'), 'Connection is not secure');
+  await bubble.click('#site-perms .site-row:nth-child(1) button[data-value="block"]');
+  await until(() => main((ctx, r, w, origin) => ctx.config.get('permissions')[origin]?.['media:video'] === 'deny', BASE), 'camera blocked for the site');
+  assert.equal(await bubble.isVisible('#site-reload'), true);
+  await wait(200);
+  shot('16c-site-panel');
+  await bubble.click('#site-perms .site-row:nth-child(1) button[data-value="ask"]');
+  await until(() => main((ctx, r, w, origin) => !ctx.config.get('permissions')[origin], BASE), 'camera back to ask');
+  await bubble.click('#site-close');
+  await until(() => main((ctx, r, w) => !w.bubbleOpen), 'panel closed');
+});
+
 await step('extensions install from a signed package, sit in the toolbar and open their popup', async () => {
   await main((ctx, r, w, a) => r('./extensions').installFromStore(a.id, a.url), { id: ROAR.id, url: `${BASE}/roar.crx` });
   const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));
@@ -652,6 +672,22 @@ await step('dark mode', async () => {
   await wait(900);
   shot('14-dark');
   await main((ctx) => ctx.setSetting('theme', 'system'));
+});
+
+await step('closed windows can be reopened like tabs', async () => {
+  await main((ctx, r, w, base) => r('./actions').openWindow({ urls: [`${base}/two`, `${base}/article`] }), BASE);
+  await until(() => main((ctx) => ctx.windows.size === 2), 'second window');
+  await until(() => main((ctx) => [...ctx.windows][1].allTabs().every((t) => t.title)), 'second window loaded');
+  await main((ctx) => [...ctx.windows][1].win.close());
+  await until(() => main((ctx) => ctx.windows.size === 1 && ctx.closedWindows.length === 1), 'window closed and remembered');
+  await main((ctx, r) => r('./actions').run('reopenTab', [...ctx.windows][0]));
+  await until(() => main((ctx) => ctx.windows.size === 2), 'window reopened');
+  const urls = await main((ctx) => [...ctx.windows][1].space().tabs.map((t) => t.displayUrl));
+  assert.deepEqual(urls, [`${BASE}/two`, `${BASE}/article`]);
+  assert.equal(await main((ctx) => ctx.closedWindows.length), 0);
+  await until(() => main((ctx) => !([...ctx.windows][1].activeTab()?.loading ?? true)), 'reopened window loaded');
+  await main((ctx, r, w, base) => [...ctx.windows].find((x) => x.allTabs().some((t) => t.displayUrl === `${base}/two`))?.win.close(), BASE);
+  await until(() => main((ctx) => ctx.windows.size === 1), 'back to one window');
 });
 
 await step('private windows use a separate, in-memory session', async () => {

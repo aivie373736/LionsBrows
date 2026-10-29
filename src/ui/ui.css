@@ -233,6 +233,18 @@ body.h .tb-center {
 #addr-icon.warn {
   color: var(--danger);
 }
+#addr-icon.secure,
+#addr-icon.warn {
+  width: 24px;
+  height: 24px;
+  margin-left: 0;
+  border-radius: 999px;
+}
+#addr-icon.secure:hover,
+#addr-icon.warn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
 #addr-text {
   flex: 1;
   min-width: 0;

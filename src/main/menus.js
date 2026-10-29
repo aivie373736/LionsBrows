@@ -6,7 +6,7 @@ const { engine, searchUrl } = require('./search-engines');
 const omnibox = require('./omnibox');
 const adblock = require('./adblock');
 const workspaces = require('./workspaces');
-const { run, accelerator, openWindow, openInternal } = require('./actions');
+const { run, accelerator, openWindow, openInternal, reopenWindow } = require('./actions');
 const { tr, locale } = require('./i18n');
 
 const SEP = { type: 'separator' };
@@ -252,6 +252,23 @@ function extensionMenu(w, id, x, y) {
   );
 }
 
+function recentlyClosedSubmenu(w) {
+  const tabs = w.closed.map((t, i) => ({ ...t, kind: 'tab', i }));
+  const windows = w.isPrivate ? [] : ctx.closedWindows.map((x, i) => ({ ...x, kind: 'window', i }));
+  const items = [...tabs, ...windows].sort((a, b) => b.at - a.at).slice(0, 12);
+  return {
+    label: tr('Recently closed'),
+    enabled: items.length > 0,
+    submenu: items.length
+      ? items.map((x, n) => ({
+          label: x.kind === 'tab' ? short(x.title || x.url, 48) : x.count === 1 ? tr('Window with 1 tab') : tr('Window with {n} tabs', { n: x.count }),
+          ...(n === 0 ? acc('reopenTab') : {}),
+          click: () => (x.kind === 'tab' ? w.reopenClosed(x.i) : reopenWindow(x.i)),
+        }))
+      : [{ label: tr('Recently closed'), enabled: false }],
+  };
+}
+
 function workspacesSubmenu(w) {
   if (w.isPrivate) return null;
   return {
@@ -283,7 +300,7 @@ function mainMenu(w, x, y) {
       { label: tr('New tab'), ...acc('newTab'), click: () => run('newTab', w) },
       { label: tr('New window'), ...acc('newWindow'), click: () => run('newWindow', w) },
       { label: tr('New private window'), ...acc('newPrivateWindow'), click: () => run('newPrivateWindow', w) },
-      { label: tr('Reopen closed tab'), ...acc('reopenTab'), enabled: w.closed.length > 0, click: () => run('reopenTab', w) },
+      recentlyClosedSubmenu(w),
       SEP,
       { label: tr('History'), ...acc('history'), click: () => run('history', w) },
       { label: tr('Bookmarks'), ...acc('bookmarksPage'), click: () => run('bookmarksPage', w) },

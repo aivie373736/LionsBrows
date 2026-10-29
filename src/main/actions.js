@@ -16,6 +16,18 @@ function openWindow(opts) {
   return new BrowserWin(opts);
 }
 
+function reopenWindow(index = ctx.closedWindows.length - 1) {
+  const [entry] = ctx.closedWindows.splice(index, 1);
+  if (entry) openWindow({ restore: entry.state, full: true });
+}
+
+function reopenLast(w) {
+  const tab = w.closed[w.closed.length - 1];
+  const win = w.isPrivate ? null : ctx.closedWindows[ctx.closedWindows.length - 1];
+  if (win && (!tab || win.at > tab.at)) reopenWindow();
+  else w.reopenClosed();
+}
+
 function activeWc(w) {
   return w.activeTab()?.wc || null;
 }
@@ -88,7 +100,7 @@ const ACTIONS = {
   newWindow: { title: 'New window', keys: ['mod+n'], run: () => openWindow({}) },
   newPrivateWindow: { title: 'New private window', keys: ['mod+shift+n'], run: () => openWindow({ isPrivate: true }) },
   closeTab: { title: 'Close tab', keys: ['mod+w', 'mod+f4'], run: (w) => w.activeTab() && w.closeTab(w.activeTab().id) },
-  reopenTab: { title: 'Reopen closed tab', keys: ['mod+shift+t'], run: (w) => w.reopenClosed() },
+  reopenTab: { title: 'Reopen closed tab', keys: ['mod+shift+t'], run: (w) => reopenLast(w) },
   duplicateTab: { title: 'Duplicate tab', run: (w) => w.activeTab() && w.duplicateTab(w.activeTab().id) },
   pinTab: { title: 'Pin / unpin tab', run: (w) => w.activeTab() && w.togglePin(w.activeTab().id) },
   muteTab: { title: 'Mute / unmute tab', keys: ['mod+shift+m'], run: (w) => w.activeTab()?.setMuted(!w.activeTab().muted) },
@@ -205,4 +217,4 @@ function shortcutLabel(id) {
     .replace(/\+/g, '');
 }
 
-module.exports = { ACTIONS, run, accelerator, shortcutLabel, openWindow, openInternal };
+module.exports = { ACTIONS, run, accelerator, shortcutLabel, openWindow, openInternal, reopenWindow };

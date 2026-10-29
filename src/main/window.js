@@ -15,6 +15,7 @@ const UI_HTML = path.join(__dirname, '..', 'ui', 'index.html');
 const OVERLAY_HTML = path.join(__dirname, '..', 'ui', 'overlay.html');
 const BUBBLE_HTML = path.join(__dirname, '..', 'ui', 'bubble.html');
 const BUBBLE_W = 388;
+const SITE_W = 392;
 const ICON = path.join(__dirname, '..', 'shared', 'icon.png');
 
 const VERTICAL = { toolbar: 48, sidebar: 252, sidebarCollapsed: 60, panel: 340, find: 44, gap: 8, radius: 8 };
@@ -45,7 +46,7 @@ function onSomeDisplay(b) {
 }
 
 class BrowserWin {
-  constructor({ isPrivate = false, restore = null, urls = [] } = {}) {
+  constructor({ isPrivate = false, restore = null, urls = [], full = false } = {}) {
     this.isPrivate = isPrivate;
     this.privateId = isPrivate ? ++privateCounter : 0;
     this.focusedAt = Date.now();
@@ -60,9 +61,13 @@ class BrowserWin {
     this.overlay = null;
     this.overlayOpen = false;
     this.bubble = null;
+    if (this.bubbleKind === 'site') this.siteHiddenAt = Date.now();
     this.bubbleOpen = false;
     this.bubbleTab = null;
+    this.bubbleKind = null;
     this.bubbleHeight = 220;
+    this.bubbleKind = null;
+    this.siteAnchor = null;
     this.addressAnchor = null;
     this.statePending = false;
     this.forget = false;
@@ -72,7 +77,7 @@ class BrowserWin {
     this.#createWindow(restore);
     ctx.windows.add(this);
 
-    if (restore && !isPrivate) this.#restore(restore);
+    if (restore && !isPrivate) this.#restore(restore, full);
     for (const url of urls) this.newTab({ url });
     if (!this.space().tabs.length) this.newTab();
     else if (!urls.length) this.activate(this.space().activeId || this.space().tabs[0].id);
@@ -156,7 +161,14 @@ class BrowserWin {
   #onClose() {
     if (this.isPrivate) return;
     const normal = [...ctx.windows].filter((w) => !w.isPrivate);
-    if (!ctx.quitting && normal.length > 1) this.forget = true;
+    if (!ctx.quitting && normal.length > 1) {
+      this.forget = true;
+      const count = this.allTabs().filter((t) => !t.url.startsWith(NEWTAB)).length;
+      if (count) {
+        ctx.closedWindows.push({ at: Date.now(), count, state: this.serialize() });
+        if (ctx.closedWindows.length > 5) ctx.closedWindows.shift();
+      }
+    }
     require('./session').saveNow();
   }
 
@@ -212,8 +224,8 @@ class BrowserWin {
     return t ? [t] : [];
   }
 
-  #restore(saved) {
-    const startup = ctx.settings().startup;
+  #restore(saved, full = false) {
+    const startup = full ? 'restore' : ctx.settings().startup;
     for (const [wsId, data] of Object.entries(saved.spaces || {})) {
       if (!ctx.workspaces().some((w) => w.id === wsId)) continue;
       const s = this.space(wsId);
@@ -303,7 +315,7 @@ class BrowserWin {
     const s = this.space(tab.workspaceId);
     const idx = s.tabs.indexOf(tab);
     if (!tab.url.startsWith(NEWTAB)) {
-      this.closed.push({ ...tab.serialize(), workspaceId: tab.workspaceId, index: idx });
+      this.closed.push({ ...tab.serialize(), workspaceId: tab.workspaceId, index: idx, at: Date.now() });
       if (this.closed.length > 25) this.closed.shift();
     }
     s.tabs.splice(idx, 1);
@@ -354,8 +366,8 @@ class BrowserWin {
     for (const t of tabs.slice(tabs.indexOf(tab) + 1)) if (!t.pinned) this.closeTab(t.id);
   }
 
-  reopenClosed() {
-    const last = this.closed.pop();
+  reopenClosed(index = this.closed.length - 1) {
+    const [last] = this.closed.splice(index, 1);
     if (!last) return;
     const workspaceId = ctx.workspaces().some((w) => w.id === last.workspaceId) || this.isPrivate ? last.workspaceId : this.activeWorkspaceId;
     const tab = this.newTab({ url: last.url, workspaceId, pinned: last.pinned });
@@ -585,8 +597,11 @@ class BrowserWin {
         this.win.contentView.addChildView(this.bubble);
       }
       const anchor = this.addressAnchor || { right: width - 8, bottom: this.lastArea.y };
-      const x = Math.max(8, Math.min(width - BUBBLE_W - 8, anchor.right - BUBBLE_W + 12));
-      this.bubble.setBounds({ x, y: anchor.bottom + 2, width: BUBBLE_W, height: Math.min(this.bubbleHeight, height - anchor.bottom - 8) });
+      const site = this.bubbleKind === 'site' && this.siteAnchor;
+      const w = site ? SITE_W : BUBBLE_W;
+      const x = Math.max(8, Math.min(width - w - 8, site ? this.siteAnchor.x - 16 : anchor.right - w + 12));
+      const y = (site ? this.siteAnchor.bottom : anchor.bottom) + 2;
+      this.bubble.setBounds({ x, y, width: w, height: Math.min(this.bubbleHeight, height - y - 8) });
     }
     if (this.overlayOpen) {
       if (added || this.bubbleOpen) {
@@ -609,7 +624,44 @@ class BrowserWin {
         this.hideBubble();
       }
     });
+    this.bubble.webContents.on('blur', () => {
+      if (this.bubbleOpen && this.bubbleKind === 'site') setTimeout(() => this.bubbleKind === 'site' && !this.bubble.webContents.isFocused() && this.hideBubble(false), 120);
+    });
     return this.bubbleReady;
+  }
+
+  #openBubble(tab, kind) {
+    if (!this.bubbleOpen) {
+      this.win.contentView.addChildView(this.bubble);
+      this.bubbleOpen = true;
+    }
+    this.bubbleKind = kind;
+    this.bubbleTab = tab.id;
+    this.layout();
+  }
+
+  async showSiteBubble(rect = {}) {
+    const tab = this.activeTab();
+    const url = tab?.wc ? tab.displayUrl : '';
+    if (!/^https?:/.test(url)) return;
+    const { host, origin, protocol } = new URL(url);
+    const domain = require('tldts').getDomain(host) || host;
+    const [cookies] = await Promise.all([tab.wc.session.cookies.get({ domain }).catch(() => []), this.#ensureBubble()]);
+    if (this.win.isDestroyed() || this.activeTab() !== tab) return;
+    this.siteAnchor = { x: Number(rect.x) || 0, bottom: (Number(rect.y) || 0) + (Number(rect.height) || 0) };
+    this.#openBubble(tab, 'site');
+    this.bubble.webContents.send('bubble:show', {
+      kind: 'site',
+      host,
+      secure: protocol === 'https:',
+      permissions: require('./permissions').siteState(origin, this.isPrivate),
+      cookies: cookies.length,
+      accent: ctx.accentColor(),
+      dark: nativeTheme.shouldUseDarkColors,
+      isPrivate: this.isPrivate,
+    });
+    this.bubble.webContents.focus();
+    this.scheduleState();
   }
 
   async showPasswordBubble() {
@@ -618,12 +670,7 @@ class BrowserWin {
     if (!pending) return;
     await this.#ensureBubble();
     if (this.win.isDestroyed() || this.activeTab() !== tab) return;
-    if (!this.bubbleOpen) {
-      this.win.contentView.addChildView(this.bubble);
-      this.bubbleOpen = true;
-    }
-    this.bubbleTab = tab.id;
-    this.layout();
+    this.#openBubble(tab, 'password');
     this.bubble.webContents.send('bubble:show', {
       kind: 'password',
       host: new URL(pending.origin).host,

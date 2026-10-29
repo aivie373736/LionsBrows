@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="bubble.css" />
   </head>
   <body>
-    <div id="card" role="dialog" aria-labelledby="title" hidden>
+    <div id="card" class="card" role="dialog" aria-labelledby="title" hidden>
       <header>
         <span class="lead" id="lead"></span>
         <h1 id="title"></h1>
@@ -28,6 +28,31 @@
       <footer>
         <button class="button" id="secondary" type="button"></button>
         <button class="button primary" id="primary" type="button"></button>
+      </footer>
+    </div>
+    <div id="site" class="card" role="dialog" aria-labelledby="site-title" hidden>
+      <header>
+        <span class="lead" id="site-lead"></span>
+        <h1 id="site-title"></h1>
+        <button class="icon-btn" id="site-close" title="Close" aria-label="Close"></button>
+      </header>
+      <div class="status">
+        <div id="site-status"></div>
+        <div class="sub" id="site-status-sub"></div>
+      </div>
+      <h2>Permissions</h2>
+      <div id="site-perms"></div>
+      <div class="site-row">
+        <span class="row-icon" id="site-cookie-icon"></span>
+        <div class="row-text">
+          <div>Cookies and site data</div>
+          <div class="sub" id="site-cookies"></div>
+        </div>
+        <button class="button small" id="site-clear" type="button">Delete</button>
+      </div>
+      <footer>
+        <button class="button" id="site-settings" type="button">Site settings</button>
+        <button class="button primary" id="site-reload" type="button" hidden>Reload to apply</button>
       </footer>
     </div>
     <script src="../shared/icons.js"></script>

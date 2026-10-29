@@ -14,6 +14,7 @@ const SECTIONS = [
   ['about', 'About LionsBrows', 'info'],
 ];
 const SECONDARY_FROM = 'extensions';
+const PERMISSION_LABELS = { 'media:video': 'Camera', 'media:audio': 'Microphone', 'media:audio+video': 'Camera and microphone', geolocation: 'Location', notifications: 'Notifications' };
 
 let S = null;
 
@@ -515,7 +516,7 @@ async function privacy() {
     const origins = Object.keys(all);
     if (!origins.length) perms.append(row('No saved permissions', 'Sites ask before using your camera, microphone, location or notifications.', null));
     for (const origin of origins) {
-      const tags = Object.entries(all[origin]).map(([perm, v]) => el('span', { class: `pill-tag ${v}` }, `${perm.replace('media:', '').replace('+', ' & ')}: ${v === 'allow' ? tr('allowed') : tr('blocked')}`));
+      const tags = Object.entries(all[origin]).map(([perm, v]) => el('span', { class: `pill-tag ${v}` }, `${tr(PERMISSION_LABELS[perm] || perm)}: ${v === 'allow' ? tr('allowed') : tr('blocked')}`));
       perms.append(
         listRow(
           origin.replace(/^https?:\/\//, ''),
@@ -706,7 +707,7 @@ function downloads() {
   const path = el('div', { class: 'path' }, S.downloadsDir);
   const change = el('button', { class: 'button' }, tr('Change'));
   change.onclick = async () => (path.textContent = await api.call('chooseDownloadsFolder'));
-  return section('downloads', null, panel('Files', 'folder-open', card(row('Location', path, change), row('Ask where to save each file', null, toggle('askWhereToSave')))));
+  return section('downloads', null, panel('Files', 'folder-open', card(row('Download folder', path, change), row('Ask where to save each file', null, toggle('askWhereToSave')))));
 }
 
 async function extensions() {

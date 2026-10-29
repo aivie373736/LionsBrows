@@ -95,6 +95,7 @@ function syncCustomEngine(settings) {
 const ctx = {
   events: new EventEmitter(),
   windows: new Set(),
+  closedWindows: [],
   quitting: false,
   config: null,
   bookmarks: null,
