@@ -703,4 +703,5 @@
   'Create QR code for this page': 'QR-Code für diese Seite erstellen',
   'This link is too long for a QR code.': 'Dieser Link ist zu lang für einen QR-Code.',
   'Copied': 'Kopiert',
+  'Blocked: this file is known to be dangerous': 'Blockiert: Diese Datei ist als gefährlich bekannt',
 });

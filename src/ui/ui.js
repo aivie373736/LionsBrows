@@ -707,6 +707,7 @@ function renderDownloads(items) {
       if (d.state === 'progressing') sub = `${d.total ? tr('{done} of {total}', { done: formatBytes(d.received), total: formatBytes(d.total) }) : formatBytes(d.received)}${d.paused ? ` · ${tr('Paused')}` : ''}`;
       else if (d.state === 'completed') sub = `${formatBytes(d.total || d.received)} · ${tr('Done')}`;
       else if (d.state === 'cancelled') sub = tr('Cancelled');
+      else if (d.state === 'blocked') sub = tr('Blocked: this file is known to be dangerous');
       else sub = tr('Failed');
       e.querySelector('.sub').textContent = sub;
       const bar = e.querySelector('.bar');

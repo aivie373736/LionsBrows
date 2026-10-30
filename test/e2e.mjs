@@ -85,6 +85,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'application/x-chrome-extension' });
     return res.end(ROAR.buf);
   }
+  if (req.url === '/malware.exe') {
+    res.writeHead(200, { 'content-type': 'application/octet-stream', 'content-disposition': 'attachment; filename="malware.exe"' });
+    return res.end('MZ not really');
+  }
   if (req.url === '/background.webm') {
     res.writeHead(200, { 'content-type': 'video/webm' });
     return res.end(fs.readFileSync(path.join(root, 'test/fixtures/background.webm')));
@@ -676,6 +680,15 @@ await step('custom colors and the tabs-on-the-side layout', async () => {
   shot('09-vertical-custom-colors');
   await main((ctx) => ctx.setSettings({ layout: 'horizontal', frameColor: '', accent: '#ee801b' }));
   await until(() => ui.evaluate(() => document.body.classList.contains('h')), 'back to tabs on top');
+});
+
+await step('known malware downloads are blocked', async () => {
+  await main((ctx, r, w, host) => r('./safety').setList('malware', r('./blocklist').build(`||${host}/malware.exe^$all`)), new URL(BASE).host);
+  await main((ctx, r, w, url) => w.activeTab().wc.downloadURL(url), `${BASE}/malware.exe`);
+  await until(() => main((ctx, r) => r('./downloads').list()[0]?.state === 'blocked'), 'download blocked');
+  assert.equal(await main((ctx, r) => r('./downloads').list()[0].filename), 'malware.exe');
+  await main((ctx, r) => r('./safety').setList('malware', new Float64Array()));
+  await main((ctx, r) => r('./downloads').action(r('./downloads').list()[0].id, 'remove'));
 });
 
 await step('downloads save to the downloads folder', async () => {

@@ -7,6 +7,7 @@ const search = libraryShell('downloads', 'Search downloads');
 function status(d) {
   if (d.state === 'progressing') return `${d.total ? tr('{done} of {total}', { done: formatBytes(d.received), total: formatBytes(d.total) }) : formatBytes(d.received)}${d.paused ? ` · ${tr('Paused')}` : ''}`;
   if (d.state === 'completed') return `${formatBytes(d.total || d.received)} · ${dayLabel(d.startTime)} ${timeLabel(d.startTime)}`;
+  if (d.state === 'blocked') return tr('Blocked: this file is known to be dangerous');
   return d.state === 'cancelled' ? tr('Cancelled') : tr('Failed');
 }
 

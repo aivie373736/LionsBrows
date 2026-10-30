@@ -908,6 +908,10 @@ body.panel-open #findbar {
   text-overflow: ellipsis;
   color: var(--text);
 }
+.dl.blocked .sub {
+  color: var(--danger);
+}
+.dl.blocked .name,
 .dl.cancelled .name,
 .dl.interrupted .name {
   text-decoration: line-through;

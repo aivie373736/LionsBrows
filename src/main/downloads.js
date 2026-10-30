@@ -33,7 +33,16 @@ function uniquePath(dir, filename) {
 }
 
 function attach(ses, { isPrivate }) {
-  ses.on('will-download', (_event, item) => {
+  ses.on('will-download', (event, item) => {
+    const safety = require('./safety');
+    const danger = [item.getURL(), ...item.getURLChain()].map((u) => safety.check(u)).find(Boolean);
+    if (danger) {
+      event.preventDefault();
+      const record = { id: nextId++, filename: item.getFilename(), url: item.getURL(), path: '', state: 'blocked', danger, paused: false, received: 0, total: 0, startTime: Date.now(), isPrivate };
+      if (!isPrivate) store.update((d) => d.items.unshift(record));
+      ctx.events.emit('download-started', record);
+      return notify();
+    }
     startedThisSession++;
     if (!ctx.settings().askWhereToSave) item.setSavePath(uniquePath(downloadsDir(), item.getFilename()));
     const record = {
