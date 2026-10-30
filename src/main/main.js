@@ -66,13 +66,38 @@ const pendingUrls = urlsFromArgv(process.argv);
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', (_e, argv) => openUrls(urlsFromArgv(argv)));
+  app.on('second-instance', (_e, argv) => {
+    if (argv.includes('--private-window')) openWindow({ isPrivate: true, urls: urlsFromArgv(argv) });
+    else if (argv.includes('--new-window')) openWindow({ urls: urlsFromArgv(argv) });
+    else openUrls(urlsFromArgv(argv));
+  });
   app.on('open-url', (event, url) => {
     event.preventDefault();
     if (app.isReady()) openUrls([url]);
     else pendingUrls.push(url);
   });
   app.whenReady().then(start);
+}
+
+function openWindow(opts) {
+  const { BrowserWin } = require('./window');
+  const w = new BrowserWin(opts);
+  w.win.focus();
+}
+
+function installShortcuts() {
+  const { tr } = i18n;
+  const items = [
+    ['--new-window', tr('New window'), () => openWindow({})],
+    ['--private-window', tr('New private window'), () => openWindow({ isPrivate: true })],
+  ];
+  if (process.platform === 'win32' && app.isPackaged) {
+    app.setUserTasks(items.map(([args, title]) => ({ program: process.execPath, arguments: args, iconPath: process.execPath, iconIndex: 0, title, description: title })));
+  }
+  if (process.platform === 'darwin') {
+    const { Menu } = require('electron');
+    app.dock?.setMenu(Menu.buildFromTemplate(items.map(([, label, click]) => ({ label, click }))));
+  }
 }
 
 function openUrls(urls) {
@@ -114,11 +139,14 @@ async function start() {
     pendingUrls.push('lions://welcome/');
     ctx.setSetting('welcomeDone', true);
   }
-  if (saved.length) {
+  if (process.argv.includes('--private-window')) {
+    new BrowserWin({ isPrivate: true, urls: pendingUrls });
+  } else if (saved.length) {
     saved.forEach((restore, i) => new BrowserWin({ restore, urls: i === 0 ? pendingUrls : [] }));
   } else {
     new BrowserWin({ urls: pendingUrls });
   }
+  installShortcuts();
   setImmediate(() => adblock.init().catch((err) => console.warn('[adblock]', err.message)));
   setImmediate(() => require('./safety').init().catch((err) => console.warn('[safety]', err.message)));
   require('electron').components?.whenReady?.().catch((err) => console.warn('[widevine]', err.message));

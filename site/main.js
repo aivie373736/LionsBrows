@@ -12,7 +12,7 @@ const DE = {
   'f.minimal.t': 'Schlicht von Anfang an',
   'f.minimal.p': 'Zurück, Vorwärts, Neu laden, Adressleiste und ein Menü. Downloads, geteilte Ansicht und Notizen erscheinen nur, wenn du sie brauchst.',
   'f.privacy.t': 'Blockiert Werbung und Tracker',
-  'f.privacy.p': 'Eingebauter Blocker, automatisches HTTPS, Global Privacy Control und private Fenster, die beim Schließen alles vergessen.',
+  'f.privacy.p': 'Eingebauter Blocker, ausgeblendete Cookie-Banner, Warnungen vor Phishing-Seiten und private Fenster, die beim Schließen alles vergessen.',
   'f.memory.t': 'Sparsam mit Arbeitsspeicher',
   'f.memory.p': 'Inaktive Tabs ruhen automatisch, und auf Computern mit 4 GB RAM oder weniger schaltet sich ein Sparmodus von selbst ein.',
   'f.reader.t': 'Leseansicht',
