@@ -2,6 +2,7 @@
 
 const { ipcMain, safeStorage } = require('electron');
 const { ctx } = require('./context');
+const { tr } = require('./i18n');
 const { getDomain } = require('tldts');
 const { originOf } = require('./passwords');
 
@@ -47,6 +48,14 @@ function onSubmitted(event, data) {
   if (!password) return;
   const remembered = t.lastUsername;
   if (!username && remembered && Date.now() - remembered.at < USERNAME_MEMORY && sameSite(remembered.origin, origin)) username = remembered.username;
+  const generated = t.generated;
+  if (generated && generated.origin === origin && generated.password === password) {
+    t.generated = null;
+    ctx.passwords.save(origin, username, password);
+    require('./internal-api').broadcast('passwords-changed');
+    w.scheduleState();
+    return;
+  }
   const state = ctx.passwords.check(origin, username, password);
   if (state === 'same') {
     ctx.passwords.markUsed(ctx.passwords.find(origin, username).id);
@@ -75,6 +84,20 @@ function onForm(event) {
   if (!t || !frameOrigin(event)) return;
   t.hasLoginForm = true;
   w.scheduleState();
+}
+
+function suggestAllowed(event) {
+  const origin = frameOrigin(event);
+  const { w } = tabFor(event.sender);
+  if (!origin || !w || w.isPrivate || !available() || !ctx.settings().offerToSavePasswords || ctx.passwords.isNever(origin)) return null;
+  return { title: tr('Use a strong password'), hint: tr('LionsBrows saves it for this site.'), accent: ctx.accentColor() };
+}
+
+function onGenerated(event, data) {
+  const origin = frameOrigin(event);
+  const { t } = tabFor(event.sender);
+  const password = String(data?.password || '').slice(0, 200);
+  if (origin && t && password) t.generated = { origin, password };
 }
 
 function autofill(event, opts = {}) {
@@ -125,6 +148,8 @@ function init() {
   ipcMain.on('lions:password-form', onForm);
   ipcMain.on('lions:username-submitted', onUsernameSubmitted);
   ipcMain.handle('lions:password-autofill', autofill);
+  ipcMain.handle('lions:password-suggest', suggestAllowed);
+  ipcMain.on('lions:password-generated', onGenerated);
 }
 
 module.exports = { init, codec, available, weakStorage, savedFor, fill, save, never, originOfTab };

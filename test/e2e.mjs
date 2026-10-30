@@ -42,6 +42,7 @@ const PAGES = {
   '/step1': `<title>Step 1</title><form action="/step2"><input type="email" name="identifier" autocomplete="username"><button>Next</button></form>`,
   '/step2': `<title>Step 2</title><form action="/two"><input type="password" name="Passwd" autocomplete="current-password"><button>Next</button></form>`,
   '/autoplay': `<title>Autoplay</title><video src="/background.webm"></video>`,
+  '/signup': `<title>Create account</title><form action="/two" method="get"><input id="email" name="email" type="email" autocomplete="username"><input id="new" name="password" type="password" autocomplete="new-password"><input id="confirm" name="confirm" type="password" autocomplete="new-password"><button id="create" type="submit">Create account</button></form>`,
   '/login': `<title>Sign in</title><form action="/two" method="get"><input id="user" name="u" type="email" autocomplete="username"><input id="pass" name="p" type="password" autocomplete="current-password"><button id="go" type="submit">Sign in</button></form>`,
   '/download': null,
 };
@@ -484,6 +485,35 @@ await step('logins inside web components and two-step logins are captured and fi
   page = await open(`${BASE}/step2?again`);
   await until(() => page.inputValue('input[type="password"]').then((v) => v === 'two-step-pw'), 'password filled on step 2');
   await reset();
+});
+
+await step('sign-up forms get a strong password that is saved', async () => {
+  const url = BASE.replace('127.0.0.1', 'signup.lions.test') + '/signup';
+  const origin = new URL(url).origin;
+  await main((ctx, r, w, u) => w.newTab({ url: u }), url);
+  const page = await activePage(app, main);
+  await page.fill('#email', 'leo@lions.test');
+  await page.click('#new');
+  await page.waitForSelector('lionsbrows-suggestion');
+  await wait(200);
+  shot('09c-strong-password');
+  await page.click('lionsbrows-suggestion');
+  const [first, second] = await page.evaluate(() => [document.getElementById('new').value, document.getElementById('confirm').value]);
+  assert.equal(first.length, 16);
+  assert.equal(first, second);
+  assert.match(first, /[a-z]/);
+  assert.match(first, /[A-Z]/);
+  assert.match(first, /[0-9]/);
+  assert.equal(await page.$('lionsbrows-suggestion'), null);
+  await page.click('#create');
+  await until(() => main((ctx, r, w, o) => ctx.passwords.forOrigin(o).length === 1, origin), 'generated password saved');
+  const saved = await main((ctx, r, w, o) => {
+    const login = ctx.passwords.forOrigin(o)[0];
+    return { username: login.username, password: ctx.passwords.credentials(login.id).password };
+  }, origin);
+  assert.deepEqual(saved, { username: 'leo@lions.test', password: first });
+  assert.equal(await main((ctx, r, w) => w.bubbleOpen), false);
+  await main((ctx, r, w) => w.closeTab(w.activeTab().id));
 });
 
 await step('autoplay with sound is blocked by default', async () => {

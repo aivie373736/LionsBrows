@@ -689,4 +689,6 @@
   'LionsBrows checks pages against public lists of phishing and malware sites.': 'LionsBrows prüft Seiten anhand öffentlicher Listen von Phishing- und Malware-Seiten.',
   'Back to safety': 'Zurück in Sicherheit',
   'Continue anyway': 'Trotzdem fortfahren',
+  'Use a strong password': 'Starkes Passwort verwenden',
+  'LionsBrows saves it for this site.': 'LionsBrows speichert es für diese Website.',
 });

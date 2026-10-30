@@ -92,6 +92,7 @@ if (location.protocol === 'lions:') {
     offered = true;
     observer.disconnect();
     ipcRenderer.send('lions:password-form');
+    if (isNewPassword(fields.pw)) return;
     const login = await ipcRenderer.invoke('lions:password-autofill');
     if (!login) return;
     if (fields.user && !fields.user.value && login.username) setValue(fields.user, login.username);
@@ -112,6 +113,100 @@ if (location.protocol === 'lions:') {
       scanTimer = null;
       offer();
     }, 400);
+  }
+
+  const NEW_HINT = /new|confirm|repeat|again|register|sign-?up|create|neu|wiederhol|bestätig/i;
+  const KEY_ICON =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>';
+  let suggestion = null;
+
+  function deepActive() {
+    let active = document.activeElement;
+    while (active && active.shadowRoot && active.shadowRoot.activeElement) active = active.shadowRoot.activeElement;
+    return active;
+  }
+
+  function passwordFields(input) {
+    const root = input.form || input.getRootNode();
+    return [...root.querySelectorAll('input[type="password"]')].filter((i) => visible(i) && !i.disabled && !i.readOnly && i.autocomplete !== 'current-password');
+  }
+
+  function isNewPassword(input) {
+    if (input.autocomplete === 'new-password') return true;
+    if (input.autocomplete === 'current-password') return false;
+    return passwordFields(input).length >= 2 || NEW_HINT.test(`${input.name} ${input.id} ${input.placeholder} ${input.getAttribute('aria-label') || ''}`);
+  }
+
+  function generatePassword(maxLength) {
+    const sets = ['abcdefghijkmnopqrstuvwxyz', 'ABCDEFGHJKLMNPQRSTUVWXYZ', '23456789', '-_!?'];
+    const all = sets.join('');
+    const random = (n) => crypto.getRandomValues(new Uint32Array(1))[0] % n;
+    const length = Math.max(8, Math.min(16, maxLength > 0 ? maxLength : 16));
+    const chars = sets.map((set) => set[random(set.length)]);
+    while (chars.length < length) chars.push(all[random(all.length)]);
+    for (let i = chars.length - 1; i > 0; i--) {
+      const j = random(i + 1);
+      [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+    return chars.join('');
+  }
+
+  function hideSuggestion() {
+    if (!suggestion) return;
+    suggestion.host.remove();
+    window.removeEventListener('scroll', suggestion.place, true);
+    window.removeEventListener('resize', suggestion.place);
+    suggestion = null;
+  }
+
+  async function suggest(input) {
+    if (suggestion && suggestion.input === input) return;
+    hideSuggestion();
+    if (input.value || !isNewPassword(input)) return;
+    const info = await ipcRenderer.invoke('lions:password-suggest');
+    if (!info || deepActive() !== input || input.value || suggestion) return;
+    const password = generatePassword(input.maxLength);
+    const host = document.createElement('lionsbrows-suggestion');
+    const root = host.attachShadow({ mode: 'closed' });
+    const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const accent = /^#[0-9a-f]{6}$/i.test(info.accent) ? info.accent : '#7542e5';
+    root.innerHTML = `<style>
+      :host { all: initial; }
+      button { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 300px; max-width: calc(100vw - 16px); padding: 10px 14px; border-radius: 12px; cursor: pointer;
+        font: 13px/1.35 "Segoe UI", system-ui, -apple-system, sans-serif; background: ${dark ? '#26252c' : '#ffffff'}; color: ${dark ? '#f4f3f8' : '#15141a'};
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), 0 0 0 1px ${dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}; animation: pop 0.12s ease-out; }
+      button:hover, button:focus-visible { background: ${dark ? '#302f37' : '#f4f3f8'}; }
+      .k { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; flex: none; color: ${accent}; background: color-mix(in srgb, ${accent} 15%, transparent); }
+      .t { display: grid; gap: 2px; min-width: 0; }
+      b { font-weight: 600; }
+      code { font: 12.5px ui-monospace, "Cascadia Mono", Consolas, monospace; opacity: 0.75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      small { font-size: 11.5px; opacity: 0.6; }
+      @keyframes pop { from { opacity: 0; transform: translateY(-3px); } }
+    </style><button type="button"><span class="k">${KEY_ICON}</span><span class="t"><b></b><code></code><small></small></span></button>`;
+    root.querySelector('b').textContent = info.title;
+    root.querySelector('code').textContent = password;
+    root.querySelector('small').textContent = info.hint;
+    const button = root.querySelector('button');
+    button.addEventListener('mousedown', (e) => e.preventDefault());
+    button.addEventListener('click', (e) => {
+      if (!e.isTrusted) return;
+      for (const field of passwordFields(input)) setValue(field, password);
+      ipcRenderer.send('lions:password-generated', { password });
+      hideSuggestion();
+    });
+    const place = () => {
+      const r = input.getBoundingClientRect();
+      if (!r.width) return hideSuggestion();
+      host.style.setProperty('position', 'fixed', 'important');
+      host.style.setProperty('z-index', '2147483647', 'important');
+      host.style.setProperty('top', `${Math.round(r.bottom + 6)}px`, 'important');
+      host.style.setProperty('left', `${Math.round(Math.max(8, Math.min(r.left, innerWidth - 308)))}px`, 'important');
+    };
+    suggestion = { host, input, place };
+    place();
+    document.documentElement.append(host);
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
   }
 
   const observer = new MutationObserver(scheduleScan);
@@ -136,7 +231,25 @@ if (location.protocol === 'lions:') {
   document.addEventListener('focusin', (e) => {
     const target = targetOf(e);
     if (target instanceof HTMLInputElement && (target.type === 'password' || target.getRootNode() !== document)) offer(true);
+    if (target instanceof HTMLInputElement && target.type === 'password') suggest(target);
   });
+  document.addEventListener('focusout', (e) => {
+    if (suggestion && targetOf(e) === suggestion.input) setTimeout(() => deepActive() !== suggestion?.input && hideSuggestion(), 100);
+  });
+  document.addEventListener(
+    'input',
+    (e) => {
+      if (suggestion && e.isTrusted && targetOf(e) === suggestion.input) hideSuggestion();
+    },
+    true,
+  );
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      if (suggestion && e.key === 'Escape') hideSuggestion();
+    },
+    true,
+  );
   document.addEventListener('DOMContentLoaded', () => {
     offer();
     observer.observe(document.documentElement, { childList: true, subtree: true });
