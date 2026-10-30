@@ -144,6 +144,7 @@ class Tab {
       this.#checkLanguage(wc);
     });
     wc.on('did-navigate', (_e, url) => {
+      this.#applyZoom(wc, url);
       this.url = url;
       this.crashed = false;
       if (!url.startsWith('lions://error')) this.errorUrl = null;
@@ -298,7 +299,32 @@ class Tab {
       next = ZOOM_FACTORS[Math.min(ZOOM_FACTORS.length - 1, Math.max(0, base + step))];
     }
     wc.setZoomFactor(next);
+    this.#rememberZoom(wc.getURL(), next);
     this.owner.tabChanged(this);
+  }
+
+  #zoomHost(url) {
+    try {
+      const u = new URL(url);
+      return /^https?:$/.test(u.protocol) ? u.hostname : null;
+    } catch {
+      return null;
+    }
+  }
+
+  #rememberZoom(url, factor) {
+    const host = this.#zoomHost(url);
+    if (!host || this.owner.isPrivate) return;
+    ctx.config.update((d) => {
+      if (Math.abs(factor - 1) < 0.001) delete d.zoom[host];
+      else d.zoom[host] = factor;
+    });
+  }
+
+  #applyZoom(wc, url) {
+    const host = this.#zoomHost(url);
+    const factor = (host && !this.owner.isPrivate && ctx.config.get('zoom')[host]) || 0;
+    if (factor && Math.abs(wc.getZoomFactor() - factor) > 0.001) wc.setZoomFactor(factor);
   }
 
   sleep() {

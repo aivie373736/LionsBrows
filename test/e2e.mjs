@@ -682,6 +682,21 @@ await step('custom colors and the tabs-on-the-side layout', async () => {
   await until(() => ui.evaluate(() => document.body.classList.contains('h')), 'back to tabs on top');
 });
 
+await step('page zoom is remembered for each site', async () => {
+  const url = BASE.replace('127.0.0.1', 'zoom.lions.test') + '/two';
+  await main((ctx, r, w, u) => w.newTab({ url: u }), url);
+  await activePage(app, main);
+  await main((ctx, r, w) => w.activeTab().zoom(1));
+  assert.equal(await main((ctx) => ctx.config.get('zoom')['zoom.lions.test']), 1.1);
+  await main((ctx, r, w) => w.activeTab().zoom(0));
+  assert.equal(await main((ctx) => ctx.config.get('zoom')['zoom.lions.test']), undefined);
+  await main((ctx) => ctx.config.update((d) => (d.zoom['stored.lions.test'] = 1.25)));
+  await main((ctx, r, w, u) => w.activeTab().navigate(u), url.replace('zoom.lions.test', 'stored.lions.test'));
+  await until(() => main((ctx, r, w) => Math.abs(w.activeTab().wc.getZoomFactor() - 1.25) < 0.01), 'stored zoom applied');
+  await main((ctx) => ctx.config.update((d) => delete d.zoom['stored.lions.test']));
+  await main((ctx, r, w) => w.closeTab(w.activeTab().id));
+});
+
 await step('known malware downloads are blocked', async () => {
   await main((ctx, r, w, host) => r('./safety').setList('malware', r('./blocklist').build(`||${host}/malware.exe^$all`)), new URL(BASE).host);
   await main((ctx, r, w, url) => w.activeTab().wc.downloadURL(url), `${BASE}/malware.exe`);

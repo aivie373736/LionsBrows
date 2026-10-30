@@ -116,6 +116,7 @@ const ctx = {
       permissions: {},
       adblockAllowlist: [],
       httpOnlyHosts: [],
+      zoom: {},
       extensions: [],
       unpinnedExtensions: [],
       stats: { blocked: 0, since: Date.now() },
