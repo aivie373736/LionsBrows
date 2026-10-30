@@ -51,6 +51,14 @@ if (code === 'crash') {
 } else if (n === -300) {
   title = tr('Invalid address');
   text = tr('Check the address and try again.');
+} else if (code === 'dangerous') {
+  title = tr('Dangerous site ahead');
+  text =
+    desc === 'phishing'
+      ? tr('{host} may try to trick you into giving away passwords, payment details or other personal information.', { host })
+      : tr('{host} is known to spread malware or unwanted software that can harm your device.', { host });
+  glyph = 'triangle-alert';
+  document.body.classList.add('danger');
 }
 
 document.getElementById('icon').innerHTML = icon(glyph, 48);
@@ -58,8 +66,21 @@ document.title = title;
 document.getElementById('title').textContent = title;
 document.getElementById('desc').textContent = text;
 document.getElementById('url').textContent = url;
-document.getElementById('code').textContent = code === 'crash' ? desc : desc || (code ? tr('Error {code}', { code }) : '');
+document.getElementById('code').textContent = code === 'dangerous' ? tr('LionsBrows checks pages against public lists of phishing and malware sites.') : code === 'crash' ? desc : desc || (code ? tr('Error {code}', { code }) : '');
 document.getElementById('retry').onclick = () => {
   if (url) location.href = url;
 };
 document.getElementById('back').onclick = () => history.back();
+
+if (code === 'dangerous') {
+  const retry = document.getElementById('retry');
+  const back = document.getElementById('back');
+  retry.textContent = tr('Back to safety');
+  retry.onclick = () => (history.length > 1 ? history.back() : (location.href = 'lions://newtab/'));
+  back.textContent = tr('Continue anyway');
+  back.classList.add('subtle');
+  back.onclick = async () => {
+    await window.lions?.call('dangerProceed', url);
+    location.href = url;
+  };
+}

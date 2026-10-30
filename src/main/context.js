@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS = {
   sidebarCollapsed: false,
   adblock: true,
   blockCookieBanners: true,
+  safeBrowsing: true,
   httpsUpgrade: true,
   gpc: true,
   cookies: 'keep',

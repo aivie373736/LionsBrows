@@ -34,6 +34,7 @@ class Tab {
     this.navigations = 0;
     this.hasLoginForm = false;
     this.pendingLogin = null;
+    this.danger = null;
     this.typed = false;
     this.lastActive = Date.now();
     this.savedHistory = null;
@@ -160,7 +161,13 @@ class Tab {
       changed();
     });
     wc.on('did-fail-load', (_e, code, desc, failedUrl, isMainFrame) => {
-      if (!isMainFrame || code === -3) return;
+      if (!isMainFrame) return;
+      if (this.danger && this.danger.url === failedUrl) {
+        const { url, kind } = this.danger;
+        this.danger = null;
+        return this.#showError('dangerous', kind, url);
+      }
+      if (code === -3) return;
       const httpUrl = sessions.consumeFailedUpgrade(wc.id, failedUrl);
       if (httpUrl) {
         wc.loadURL(httpUrl).catch(() => {});

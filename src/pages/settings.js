@@ -559,6 +559,7 @@ async function privacy() {
       card(
         row('Block ads and trackers', tr('{n} blocked since {date}.', { n: info.blocked.toLocaleString(LOCALE), date: since }), toggle('adblock')),
         row('Hide cookie banners', 'Rejects or hides cookie pop-ups where possible.', toggle('blockCookieBanners')),
+        row('Warn about dangerous sites', 'Checks pages on your device against public lists of phishing and malware sites.', toggle('safeBrowsing')),
         row('Filter lists', 'EasyList, EasyPrivacy and others. Updated automatically.', refresh),
       ),
       el('p', { class: 'group-label' }, tr('Exceptions')),

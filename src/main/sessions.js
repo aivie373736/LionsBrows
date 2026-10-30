@@ -8,6 +8,7 @@ const downloads = require('./downloads');
 const permissions = require('./permissions');
 const protocol = require('./protocol');
 const extensions = require('./extensions');
+const safety = require('./safety');
 
 const configured = new WeakSet();
 const upgrades = new Map();
@@ -125,6 +126,11 @@ function setup(ses, { isPrivate = false } = {}) {
 
   ses.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
     if (details.resourceType === 'mainFrame') {
+      const danger = safety.check(details.url);
+      if (danger) {
+        safety.flag(details.webContentsId, details.url, danger);
+        return callback({ cancel: true });
+      }
       const upgraded = httpsUpgrade(details);
       return callback(upgraded ? { redirectURL: upgraded } : {});
     }

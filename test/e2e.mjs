@@ -238,6 +238,22 @@ await step('cookie banners are hidden', async () => {
   await main((ctx, r, w) => w.closeTab(w.activeTab().id));
 });
 
+await step('dangerous sites show a warning first', async () => {
+  await main((ctx, r) => r('./safety').setList('phishing', r('./blocklist').build('danger.lions.test')));
+  const url = BASE.replace('127.0.0.1', 'danger.lions.test') + '/two';
+  await main((ctx, r, w, u) => w.newTab({ url: u }), url);
+  const warning = await pageFor(app, (u) => u.startsWith('lions://error/') && u.includes('code=dangerous'));
+  await warning.waitForSelector('body.danger');
+  assert.equal(await warning.textContent('#title'), 'Dangerous site ahead');
+  assert.equal(await main((ctx, r, w) => w.activeTab().displayUrl), url);
+  await wait(200);
+  shot('03b-dangerous-site');
+  await warning.click('#back');
+  await until(() => main((ctx, r, w, u) => w.activeTab().wc.getURL() === u, url), 'continued to the site');
+  await main((ctx, r, w) => w.closeTab(w.activeTab().id));
+  await main((ctx, r) => r('./safety').setList('phishing', new Float64Array()));
+});
+
 await step('find in page counts matches', async () => {
   await main((ctx, r, w) => w.openFind());
   await main((ctx, r, w) => w.findText('lion'));

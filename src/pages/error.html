@@ -52,6 +52,21 @@
         display: flex;
         gap: 10px;
       }
+      body.danger {
+        background: color-mix(in srgb, var(--danger) 7%, var(--bg));
+      }
+      body.danger .err-icon {
+        color: var(--danger);
+      }
+      .button.subtle {
+        border-color: transparent;
+        background: transparent;
+        color: var(--text-2);
+        font-weight: 500;
+      }
+      .button.subtle:hover {
+        color: var(--danger);
+      }
     </style>
   </head>
   <body>

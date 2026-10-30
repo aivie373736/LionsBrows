@@ -388,6 +388,10 @@ const API = {
     return true;
   },
 
+  dangerProceed(_s, url) {
+    require('./safety').proceed(String(url));
+  },
+
   readerArticle(_s, id) {
     return require('./reader').article(id);
   },
@@ -401,7 +405,7 @@ const SETTINGS_ONLY = new Set(['passwordsInfo', 'passwordReveal', 'passwordRemov
 
 const LIMITED = {
   reader: ['getSettings', 'setSettings', 'readerArticle'],
-  error: ['getSettings'],
+  error: ['getSettings', 'dangerProceed'],
 };
 
 async function call(event, method, ...args) {

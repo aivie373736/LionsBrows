@@ -44,6 +44,10 @@ Chrome extension support uses [electron-chrome-extensions](https://github.com/sa
 
 Extension packages are unpacked with [fflate](https://github.com/101arrowz/fflate) (MIT).
 
+## Phishing and malware lists
+
+Warnings about dangerous sites use lists that LionsBrows downloads while it runs: the [Phishing URL Blocklist](https://gitlab.com/malware-filter/phishing-filter) (CC BY-SA 4.0, with data from OpenPhish, PhishTank and IPThreat), the [Online Malicious URL Blocklist](https://gitlab.com/malware-filter/urlhaus-filter) (with data from [URLhaus](https://urlhaus.abuse.ch), CC0) and [uBlock Origin's badware list](https://github.com/uBlockOrigin/uAssets) (GPL-3.0).
+
 ## electron-updater
 
 Automatic updates use [electron-updater](https://github.com/electron-userland/electron-builder) (MIT).

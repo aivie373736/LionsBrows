@@ -681,4 +681,12 @@
   'View site information': 'Website-Informationen anzeigen',
   'Hide cookie banners': 'Cookie-Banner ausblenden',
   'Rejects or hides cookie pop-ups where possible.': 'Lehnt Cookie-Pop-ups ab oder blendet sie aus, wo es geht.',
+  'Warn about dangerous sites': 'Vor gefährlichen Websites warnen',
+  'Checks pages on your device against public lists of phishing and malware sites.': 'Prüft Seiten auf deinem Gerät anhand öffentlicher Listen von Phishing- und Malware-Seiten.',
+  'Dangerous site ahead': 'Gefährliche Website',
+  '{host} may try to trick you into giving away passwords, payment details or other personal information.': '{host} versucht möglicherweise, dich zur Eingabe von Passwörtern, Zahlungsdaten oder anderen persönlichen Daten zu verleiten.',
+  '{host} is known to spread malware or unwanted software that can harm your device.': '{host} ist dafür bekannt, Schadsoftware oder unerwünschte Programme zu verbreiten, die deinem Gerät schaden können.',
+  'LionsBrows checks pages against public lists of phishing and malware sites.': 'LionsBrows prüft Seiten anhand öffentlicher Listen von Phishing- und Malware-Seiten.',
+  'Back to safety': 'Zurück in Sicherheit',
+  'Continue anyway': 'Trotzdem fortfahren',
 });
