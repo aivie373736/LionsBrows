@@ -309,7 +309,8 @@ body.h .tb-center {
 #addr-star.on svg {
   fill: currentColor;
 }
-#addr-reader.on {
+#addr-reader.on,
+#addr-translate.on {
   color: var(--accent);
   background: var(--accent-soft);
 }

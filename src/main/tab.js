@@ -37,6 +37,7 @@ class Tab {
     this.danger = null;
     this.generated = null;
     this.autoPip = false;
+    this.language = '';
     this.typed = false;
     this.lastActive = Date.now();
     this.savedHistory = null;
@@ -135,9 +136,13 @@ class Tab {
       this.blocked = 0;
       this.readerable = false;
       this.hasLoginForm = false;
+      this.language = '';
       this.navigations++;
     });
-    wc.on('did-finish-load', () => this.#checkReader(wc));
+    wc.on('did-finish-load', () => {
+      this.#checkReader(wc);
+      this.#checkLanguage(wc);
+    });
     wc.on('did-navigate', (_e, url) => {
       this.url = url;
       this.crashed = false;
@@ -208,6 +213,13 @@ class Tab {
     wc.on('destroyed', () => {
       if (!this.closing && this.view && this.view.webContents === wc) this.owner.tabDestroyed(this);
     });
+  }
+
+  async #checkLanguage(wc) {
+    const language = String((await require('./translate').detect(wc)) || '').slice(0, 20);
+    if (wc !== this.wc || language === this.language) return;
+    this.language = language;
+    this.owner.tabChanged(this);
   }
 
   async #checkReader(wc, retry = true) {

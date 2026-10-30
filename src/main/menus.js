@@ -124,6 +124,16 @@ function pageMenu(tab, params) {
 
   if (!params.linkURL && !params.isEditable && !params.selectionText && params.mediaType === 'none') {
     const h = wc.navigationHistory;
+    const translate = require('./translate');
+    const original = translate.originalUrl(tab.displayUrl);
+    const target = require('./i18n').lang();
+    t.push(
+      original
+        ? { label: tr('Show original'), click: () => tab.navigate(original) }
+        : translate.translatable(tab.displayUrl)
+          ? { label: tr('Translate to {language}', { language: translate.NAMES[target] }), click: () => tab.navigate(translate.proxyUrl(tab.displayUrl, target)) }
+          : null,
+    );
     t.push(
       { label: tr('Back'), enabled: h.canGoBack(), click: () => tab.back() },
       { label: tr('Forward'), enabled: h.canGoForward(), click: () => tab.forward() },

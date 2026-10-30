@@ -31,6 +31,7 @@ $('#btn-settings').innerHTML = icon('settings');
 $('#addr-star').innerHTML = icon('star', 16);
 $('#addr-reader').innerHTML = icon('book-open', 16);
 $('#addr-key').innerHTML = icon('key-round', 16);
+$('#addr-translate').innerHTML = icon('languages', 16);
 $('#find-prev').innerHTML = icon('chevron-down', 16, 'flip');
 $('#find-prev').firstChild.style.transform = 'rotate(180deg)';
 $('#find-next').innerHTML = icon('chevron-down', 16);
@@ -163,6 +164,10 @@ $('#addr-key').onclick = (e) => {
   const r = e.currentTarget.getBoundingClientRect();
   cmd('passwordKey', r.left, r.bottom + 4);
 };
+$('#addr-translate').onclick = (e) => {
+  e.stopPropagation();
+  cmd('translatePage');
+};
 $('#addr-reader').onclick = (e) => {
   e.stopPropagation();
   cmd('toggleReader');
@@ -219,6 +224,10 @@ function renderAddress(nav) {
   keyBtn.hidden = !nav || !nav.key;
   keyBtn.classList.toggle('on', Boolean(nav && nav.key === 'pending'));
   keyBtn.title = nav && nav.key === 'pending' ? tr('Save password') : tr('Passwords');
+  const translateBtn = $('#addr-translate');
+  translateBtn.hidden = !nav || !nav.translate;
+  translateBtn.classList.toggle('on', Boolean(nav && nav.translate === 'original'));
+  translateBtn.title = nav && nav.translate === 'original' ? tr('Show original') : tr('Translate this page');
   const readerBtn = $('#addr-reader');
   readerBtn.hidden = !nav || !(nav.reader || (nav.isWeb && nav.readerable));
   readerBtn.classList.toggle('on', Boolean(nav && nav.reader));

@@ -74,6 +74,12 @@ const UI = {
   extensionMenu: (w, id, x, y) => menus.extensionMenu(w, String(id), x, y),
   extensionsMenu: (w, rect) => menus.extensionsMenu(w, rect || {}),
   extensionInstall: (w) => extensions.installFromPage(w),
+  translatePage: (w) => {
+    const tab = w.activeTab();
+    const translate = require('./translate');
+    const url = tab && (translate.originalUrl(tab.displayUrl) || translate.proxyUrl(tab.displayUrl, require('./i18n').lang()));
+    if (url) tab.navigate(url);
+  },
   siteInfo: (w, rect) => {
     if (w.bubbleOpen && w.bubbleKind === 'site') return w.hideBubble();
     if (Date.now() - (w.siteHiddenAt || 0) < 300) return undefined;

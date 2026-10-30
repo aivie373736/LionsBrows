@@ -844,6 +844,7 @@ class BrowserWin {
         bookmarked: bookmarks.has(url),
         adblockOn: isWeb && ctx.settings().adblock && !adblock.isAllowlisted(url),
         storeOffer: require('./extensions').storeOffer(this),
+        translate: ctx.settings().offerTranslate ? require('./translate').offer(url, active.language, i18n.lang()) : null,
       };
     }
     const settings = ctx.settings();

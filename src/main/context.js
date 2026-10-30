@@ -17,6 +17,7 @@ const DEFAULT_SETTINGS = {
   startup: 'restore',
   blockAutoplay: true,
   autoPictureInPicture: true,
+  offerTranslate: true,
   language: 'auto',
   autoUpdate: true,
   layout: 'horizontal',

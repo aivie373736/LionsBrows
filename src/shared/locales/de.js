@@ -694,4 +694,9 @@
   'Picture in picture when switching tabs': 'Bild im Bild beim Tab-Wechsel',
   'Videos with sound keep playing in a small window while you use another tab.': 'Videos mit Ton laufen in einem kleinen Fenster weiter, während du einen anderen Tab nutzt.',
   'Copy link to highlight': 'Link zur Markierung kopieren',
+  'Translate this page': 'Diese Seite übersetzen',
+  'Show original': 'Original anzeigen',
+  'Translate to {language}': 'Auf {language} übersetzen',
+  'Offer to translate pages': 'Übersetzung von Seiten anbieten',
+  'Shows a translate button when a page is in another language. Pages are translated by Google.': 'Zeigt einen Übersetzen-Knopf, wenn eine Seite in einer anderen Sprache ist. Übersetzt wird von Google.',
 });

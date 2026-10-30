@@ -107,7 +107,7 @@ function languagePanel() {
     await set('language', choice.value);
     note.hidden = choice.value === initial;
   });
-  return panel('Language', 'languages', card(row('Language', 'Used for menus, settings and built-in pages.', choice), note));
+  return panel('Language', 'languages', card(row('Language', 'Used for menus, settings and built-in pages.', choice), note, row('Offer to translate pages', 'Shows a translate button when a page is in another language. Pages are translated by Google.', toggle('offerTranslate'))));
 }
 
 async function importPanel() {

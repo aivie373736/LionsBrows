@@ -42,6 +42,7 @@ const PAGES = {
   '/step1': `<title>Step 1</title><form action="/step2"><input type="email" name="identifier" autocomplete="username"><button>Next</button></form>`,
   '/step2': `<title>Step 2</title><form action="/two"><input type="password" name="Passwd" autocomplete="current-password"><button>Next</button></form>`,
   '/autoplay': `<title>Autoplay</title><video src="/background.webm"></video>`,
+  '/french': `<html lang="fr-FR"><title>Lions</title><p>Le lion est un grand félin.</p>`,
   '/video': `<title>Video</title><video src="/background.webm" width="320" height="180" loop></video>`,
   '/signup': `<title>Create account</title><form action="/two" method="get"><input id="email" name="email" type="email" autocomplete="username"><input id="new" name="password" type="password" autocomplete="new-password"><input id="confirm" name="confirm" type="password" autocomplete="new-password"><button id="create" type="submit">Create account</button></form>`,
   '/login': `<title>Sign in</title><form action="/two" method="get"><input id="user" name="u" type="email" autocomplete="username"><input id="pass" name="p" type="password" autocomplete="current-password"><button id="go" type="submit">Sign in</button></form>`,
@@ -546,6 +547,16 @@ await step('videos keep playing in picture in picture when you switch tabs', asy
     w.closeTab(id);
     w.closeTab(w.activeTab().id);
   }, videoTab);
+});
+
+await step('the page language is detected for translation', async () => {
+  await main((ctx, r, w, url) => w.newTab({ url }), `${BASE}/french`);
+  await activePage(app, main);
+  await until(() => main((ctx, r, w) => w.activeTab().language === 'fr-FR'), 'language detected');
+  const offer = await main((ctx, r) => r('./translate').offer('https://fr.wikipedia.org/wiki/Lion', 'fr-FR', 'en'));
+  assert.equal(offer, 'translate');
+  assert.equal(await main((ctx, r, w) => w.state().nav.translate), null);
+  await main((ctx, r, w) => w.closeTab(w.activeTab().id));
 });
 
 await step('selected text can be shared as a link to the highlight', async () => {
