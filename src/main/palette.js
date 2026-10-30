@@ -71,6 +71,9 @@ function query(win, text, mode) {
   const value = omnibox.calculate(q);
   if (value !== null) push({ type: 'calc', id: 'calc', title: `= ${formatNumber(value)}`, subtitle: tr('Press Enter to copy the result'), value: String(value) });
 
+  const inline = mode !== 'prompt' && q.length > 1 && /^[^\s>!]+$/.test(q) && value === null ? ctx.history.complete(q) : null;
+  if (inline) push({ type: 'url', title: inline.completion, subtitle: tr('Open website'), url: inline.url, complete: inline.completion });
+
   const cls = omnibox.classify(q, engineId);
   if (cls.type === 'url') push({ type: 'url', title: omnibox.displayUrl(cls.url) || cls.url, subtitle: tr('Open website'), url: cls.url });
   else if (cls.type === 'bang') push({ type: 'search', title: cls.query, subtitle: tr('Search {name}', { name: cls.name }), url: cls.url });

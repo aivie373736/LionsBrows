@@ -55,3 +55,16 @@ test('visits listing, delete and clear', () => {
   h.clear(0);
   assert.equal(h.count(), 0);
 });
+
+test('completes hosts you visit often, but not single visits', () => {
+  const h = new History(':memory:');
+  h.add('https://www.youtube.com/watch?v=1', 'One', { typed: true });
+  h.add('https://www.youtube.com/watch?v=2', 'Two');
+  h.add('https://example.com/', 'Once');
+  assert.deepEqual(h.complete('you'), { completion: 'youtube.com', url: 'https://www.youtube.com/' });
+  assert.deepEqual(h.complete('YOUT'), { completion: 'youtube.com', url: 'https://www.youtube.com/' });
+  assert.equal(h.complete('youtube.com'), null);
+  assert.equal(h.complete('youtube.com/w'), null);
+  assert.equal(h.complete('exa'), null);
+  assert.equal(h.complete('two words'), null);
+});

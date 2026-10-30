@@ -15,6 +15,8 @@ let suggestions = [];
 let selected = 0;
 let seq = 0;
 let suggestTimer = null;
+let typed = '';
+let completing = false;
 
 const TYPE_ICON = {
   url: 'globe',
@@ -93,8 +95,17 @@ function render() {
   results.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
 }
 
+function applyCompletion() {
+  const completion = items[0] && items[0].complete;
+  if (!completing || !completion || input.value !== typed || input.selectionStart !== typed.length || input.selectionEnd !== typed.length) return false;
+  if (completion.length <= typed.length || !completion.toLowerCase().startsWith(typed.toLowerCase())) return false;
+  input.value = typed + completion.slice(typed.length);
+  input.setSelectionRange(typed.length, input.value.length);
+  return true;
+}
+
 async function refresh() {
-  const text = input.value;
+  const text = mode === 'prompt' ? input.value : typed;
   const mySeq = ++seq;
   if (mode === 'prompt') {
     items = [];
@@ -107,6 +118,7 @@ async function refresh() {
   items = found || [];
   suggestions = [];
   selected = 0;
+  if (!applyCompletion() && items[0] && items[0].complete) selected = Math.min(1, items.length - 1);
   render();
 
   clearTimeout(suggestTimer);
@@ -139,7 +151,11 @@ function submit(newTab) {
   choose(allItems()[selected], newTab);
 }
 
-input.addEventListener('input', refresh);
+input.addEventListener('input', (e) => {
+  typed = input.value;
+  completing = !String(e.inputType || '').startsWith('delete');
+  refresh();
+});
 input.addEventListener('keydown', (e) => {
   const list = allItems();
   if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey) || (e.ctrlKey && e.key === 'n')) {
@@ -187,6 +203,8 @@ window.lions.on('overlay:open', (opts) => {
   input.placeholder =
     mode === 'prompt' ? tr('Type a name') : mode === 'address' ? tr('Search or enter address') : tr('Search tabs, history and the web — or type > for commands');
   input.value = mode === 'prompt' ? opts.value || '' : opts.text || '';
+  typed = input.value;
+  completing = false;
   setHints();
   const p = $('#palette');
   p.style.animation = 'none';

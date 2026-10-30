@@ -284,6 +284,26 @@ await step('command bar finds and opens things', async () => {
   assert.equal(await main((ctx, r, w) => w.space().tabs.length), before + 1);
 });
 
+await step('the address bar completes sites you have visited', async () => {
+  const host = new URL(BASE).host;
+  await main((ctx, r, w) => w.openPalette('address'));
+  const overlay = await pageFor(app, (u) => u.includes('/ui/overlay.html'));
+  await overlay.waitForSelector('#q');
+  await overlay.fill('#q', '');
+  await overlay.locator('#q').pressSequentially('127.0.');
+  const completed = (h) => overlay.evaluate((value) => {
+    const q = document.getElementById('q');
+    return q.value === value && q.selectionStart === 6 && q.selectionEnd === value.length;
+  }, h);
+  await until(() => completed(host), 'inline completion');
+  await overlay.press('#q', 'Backspace');
+  await until(() => overlay.evaluate(() => document.getElementById('q').value === '127.0.' && !document.querySelector('.item.sel')?.textContent.includes(':')), 'completion removed');
+  await overlay.locator('#q').pressSequentially('0');
+  await until(() => overlay.evaluate((h) => document.getElementById('q').value === h, host), 'completed again');
+  await overlay.press('#q', 'Enter');
+  await until(() => main((ctx, r, w, base) => w.activeTab().wc.getURL() === `${base}/`, BASE), 'opened the completed site');
+});
+
 await step('window.open keeps the opener and opens a tab next to it', async () => {
   await main((ctx, r, w, url) => w.openUrl(url), `${BASE}/opener`);
   await until(() => main((ctx, r, w) => w.activeTab().title === 'Opener'), 'opener page');

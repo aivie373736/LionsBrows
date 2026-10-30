@@ -75,6 +75,35 @@ class History {
       .map(plain);
   }
 
+  complete(text, now = Date.now()) {
+    const prefix = text.trim().toLowerCase();
+    if (!prefix || /[\s/]/.test(prefix) || this.closed) return null;
+    const like = `${escapeLike(prefix)}%`;
+    const rows = this.db
+      .prepare(
+        `SELECT url, visit_count AS visits, typed_count AS typed, (visit_count + typed_count * 2.0) / (1.0 + (:now - last_visit) / (:day * 7.0)) AS score
+         FROM urls
+         WHERE lower(url) LIKE 'https://' || :like ESCAPE '\\' OR lower(url) LIKE 'http://' || :like ESCAPE '\\'
+            OR lower(url) LIKE 'https://www.' || :like ESCAPE '\\' OR lower(url) LIKE 'http://www.' || :like ESCAPE '\\'
+         ORDER BY score DESC
+         LIMIT 50`,
+      )
+      .all({ like, now, day: DAY });
+    const groups = new Map();
+    for (const row of rows) {
+      const shown = row.url.replace(/^https?:\/\/(www\.)?/i, '');
+      const completion = shown.split('/')[0];
+      if (!completion.toLowerCase().startsWith(prefix) || completion.length <= prefix.length) continue;
+      const group = groups.get(completion) || { completion, url: `${new URL(row.url).origin}/`, score: 0, visits: 0, typed: 0 };
+      group.score += row.score;
+      group.visits += row.visits;
+      group.typed += row.typed;
+      groups.set(completion, group);
+    }
+    const best = [...groups.values()].sort((a, b) => b.score - a.score)[0];
+    return best && (best.typed > 0 || best.visits > 1) ? { completion: best.completion, url: best.url } : null;
+  }
+
   topSites(limit = 8, now = Date.now()) {
     if (this.closed) return [];
     return this.db
