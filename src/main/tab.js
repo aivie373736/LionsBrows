@@ -36,6 +36,7 @@ class Tab {
     this.pendingLogin = null;
     this.danger = null;
     this.generated = null;
+    this.autoPip = false;
     this.typed = false;
     this.lastActive = Date.now();
     this.savedHistory = null;

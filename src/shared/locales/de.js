@@ -691,4 +691,7 @@
   'Continue anyway': 'Trotzdem fortfahren',
   'Use a strong password': 'Starkes Passwort verwenden',
   'LionsBrows saves it for this site.': 'LionsBrows speichert es für diese Website.',
+  'Picture in picture when switching tabs': 'Bild im Bild beim Tab-Wechsel',
+  'Videos with sound keep playing in a small window while you use another tab.': 'Videos mit Ton laufen in einem kleinen Fenster weiter, während du einen anderen Tab nutzt.',
+  'Copy link to highlight': 'Link zur Markierung kopieren',
 });

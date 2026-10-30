@@ -42,6 +42,7 @@ const PAGES = {
   '/step1': `<title>Step 1</title><form action="/step2"><input type="email" name="identifier" autocomplete="username"><button>Next</button></form>`,
   '/step2': `<title>Step 2</title><form action="/two"><input type="password" name="Passwd" autocomplete="current-password"><button>Next</button></form>`,
   '/autoplay': `<title>Autoplay</title><video src="/background.webm"></video>`,
+  '/video': `<title>Video</title><video src="/background.webm" width="320" height="180" loop></video>`,
   '/signup': `<title>Create account</title><form action="/two" method="get"><input id="email" name="email" type="email" autocomplete="username"><input id="new" name="password" type="password" autocomplete="new-password"><input id="confirm" name="confirm" type="password" autocomplete="new-password"><button id="create" type="submit">Create account</button></form>`,
   '/login': `<title>Sign in</title><form action="/two" method="get"><input id="user" name="u" type="email" autocomplete="username"><input id="pass" name="p" type="password" autocomplete="current-password"><button id="go" type="submit">Sign in</button></form>`,
   '/download': null,
@@ -523,6 +524,35 @@ await step('autoplay with sound is blocked by default', async () => {
     main((ctx, r, w, m) => w.activeTab().wc.executeJavaScript(`(() => { const v = document.querySelector('video'); v.muted = ${m}; return v.play().then(() => 'played', (e) => e.name); })()`, false), muted);
   assert.equal(await play(false), 'NotAllowedError');
   assert.equal(await play(true), 'played');
+});
+
+await step('videos keep playing in picture in picture when you switch tabs', async () => {
+  await main((ctx, r, w, url) => w.newTab({ url }), `${BASE}/video`);
+  const page = await activePage(app, main);
+  assert.equal(await main((ctx, r, w) => w.activeTab().wc.executeJavaScript(`document.querySelector('video').play().then(() => true)`, true)), true);
+  const videoTab = await main((ctx, r, w) => {
+    w.activeTab().audible = true;
+    return w.activeTab().id;
+  });
+  await main((ctx, r, w) => w.newTab());
+  await until(() => page.evaluate(() => Boolean(document.pictureInPictureElement)), 'video in picture in picture');
+  await main((ctx, r, w, id) => w.activate(id), videoTab);
+  await until(() => page.evaluate(() => !document.pictureInPictureElement), 'picture in picture closed on return');
+  await main((ctx, r, w) => r('./media').togglePip(w.activeTab()));
+  await until(() => page.evaluate(() => Boolean(document.pictureInPictureElement)), 'command bar action');
+  await main((ctx, r, w) => r('./media').togglePip(w.activeTab()));
+  await until(() => page.evaluate(() => !document.pictureInPictureElement), 'toggled off');
+  await main((ctx, r, w, id) => {
+    w.closeTab(id);
+    w.closeTab(w.activeTab().id);
+  }, videoTab);
+});
+
+await step('selected text can be shared as a link to the highlight', async () => {
+  const link = await main((ctx, r) => r('./menus').highlightLink('https://example.com/page#top', 'The lion  sleeps\ntonight - really'));
+  assert.equal(link, 'https://example.com/page#:~:text=The%20lion%20sleeps%20tonight%20%2D%20really');
+  const long = await main((ctx, r) => r('./menus').highlightLink('https://example.com/', 'one two three four five six seven eight nine ten eleven twelve'));
+  assert.equal(long, 'https://example.com/#:~:text=one%20two%20three%20four,nine%20ten%20eleven%20twelve');
 });
 
 await step('bookmarks', async () => {

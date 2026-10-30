@@ -168,7 +168,14 @@ async function general() {
       card(row('When LionsBrows starts', null, select('startup', [['restore', 'Continue where you left off'], ['newtab', 'Open a new tab']]))),
     ),
     panel('Default browser', 'globe', card(row('Open links from other apps in LionsBrows', null, defaultBtn))),
-    panel('Media', 'volume-x', card(row('Block sound from playing automatically', 'Videos start with sound only after you click on the page. Applies to new tabs.', toggle('blockAutoplay')))),
+    panel(
+      'Media',
+      'volume-x',
+      card(
+        row('Block sound from playing automatically', 'Videos start with sound only after you click on the page. Applies to new tabs.', toggle('blockAutoplay')),
+        row('Picture in picture when switching tabs', 'Videos with sound keep playing in a small window while you use another tab.', toggle('autoPictureInPicture')),
+      ),
+    ),
     languagePanel(),
     panel('Setup assistant', 'sparkles', card(row('Run the first-start setup again', 'Permissions, privacy, import and look in a few steps.', el('a', { class: 'button', href: 'lions://welcome/' }, tr('Start setup'))))),
     await importPanel(),

@@ -277,6 +277,7 @@ class BrowserWin {
   activate(id) {
     const tab = this.tabById(id);
     if (!tab) return;
+    const shown = this.activeTab();
     if (tab.workspaceId !== this.activeWorkspaceId) {
       this.activeWorkspaceId = tab.workspaceId;
     }
@@ -290,6 +291,7 @@ class BrowserWin {
     if (this.bubbleOpen && this.bubbleTab !== tab.id) this.hideBubble(false);
     this.layout();
     require('./extensions').selected(tab);
+    require('./media').switched(this, shown, tab);
     if (!this.overlayOpen) this.focusActive();
     this.scheduleState();
     this.scheduleSave();

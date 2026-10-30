@@ -121,6 +121,7 @@ const ACTIONS = {
   hardReload: { title: 'Hard reload (ignore cache)', keys: ['mod+shift+r', 'shift+f5', 'mod+f5'], run: (w) => w.activeTab()?.reload(true) },
 
   find: { title: 'Find in page', keys: ['mod+f'], run: (w) => w.openFind() },
+  pictureInPicture: { title: 'Picture in picture', run: (w) => require('./media').togglePip(w.activeTab()) },
   reader: { title: 'Reader view', keys: ['mod+alt+r', 'f9'], run: (w) => require('./reader').toggle(w.activeTab()) },
   findNext: { title: 'Find next', keys: ['mod+g', 'f3'], hidden: true, run: (w) => w.find.open && w.findText(w.find.query, { next: true }) },
   findPrev: { title: 'Find previous', keys: ['mod+shift+g', 'shift+f3'], hidden: true, run: (w) => w.find.open && w.findText(w.find.query, { next: true, forward: false }) },

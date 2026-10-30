@@ -38,6 +38,13 @@ function acc(id) {
   return a ? { accelerator: a, registerAccelerator: false } : {};
 }
 
+function highlightLink(url, text) {
+  const encode = (s) => encodeURIComponent(s).replace(/-/g, '%2D');
+  const words = text.replace(/\s+/g, ' ').trim().split(' ');
+  const fragment = words.length > 10 ? `${encode(words.slice(0, 4).join(' '))},${encode(words.slice(-4).join(' '))}` : encode(words.join(' '));
+  return `${url.split('#')[0]}#:~:text=${fragment}`;
+}
+
 function pageMenu(tab, params) {
   const w = tab.owner;
   const wc = tab.wc;
@@ -75,8 +82,9 @@ function pageMenu(tab, params) {
         label: tr('Picture in picture'),
         click: () =>
           wc
-            .executeJavaScript(
-              `(() => { const el = document.elementFromPoint(${x}, ${y}); const v = (el && (el.closest('video') || (el.querySelector && el.querySelector('video')))) || document.querySelector('video'); if (v) v.requestPictureInPicture().catch(() => {}); })()`,
+            .executeJavaScriptInIsolatedWorld(
+              1012,
+              [{ code: `(() => { const el = document.elementFromPoint(${x}, ${y}); const v = (el && (el.closest('video') || (el.querySelector && el.querySelector('video')))) || document.querySelector('video'); if (v) v.requestPictureInPicture().catch(() => {}); })()` }],
               true,
             )
             .catch(() => {}),
@@ -109,7 +117,9 @@ function pageMenu(tab, params) {
     if (asUrl && asUrl.type === 'url' && !/\s/.test(sel)) {
       t.push({ label: tr('Go to {text}', { text: short(sel) }), click: () => w.newTab({ url: asUrl.url, afterId: tab.id }) });
     }
-    t.push({ label: tr('Search {engine} for “{text}”', { engine: engine(engineId).name, text: short(sel) }), click: () => w.newTab({ url: searchUrl(engineId, sel), afterId: tab.id }) }, SEP);
+    t.push({ label: tr('Search {engine} for “{text}”', { engine: engine(engineId).name, text: short(sel) }), click: () => w.newTab({ url: searchUrl(engineId, sel), afterId: tab.id }) });
+    if (/^https?:/.test(tab.displayUrl)) t.push({ label: tr('Copy link to highlight'), click: () => clipboard.writeText(highlightLink(tab.displayUrl, sel)) });
+    t.push(SEP);
   }
 
   if (!params.linkURL && !params.isEditable && !params.selectionText && params.mediaType === 'none') {
@@ -545,4 +555,4 @@ function installAppMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-module.exports = { pageMenu, tabMenu, mainMenu, toolbarMenu, extensionMenu, extensionsMenu, passwordMenu, shieldMenu, workspaceMenu, workspaceSwitcher, allTabsMenu, bookmarkMenu, installAppMenu, openInternal };
+module.exports = { highlightLink, pageMenu, tabMenu, mainMenu, toolbarMenu, extensionMenu, extensionsMenu, passwordMenu, shieldMenu, workspaceMenu, workspaceSwitcher, allTabsMenu, bookmarkMenu, installAppMenu, openInternal };
