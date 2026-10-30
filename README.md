@@ -31,7 +31,7 @@
 - **Automatic updates:** new versions download in the background and install on restart.
 - **Streaming:** Netflix, Spotify, Disney+ and other services that use Widevine DRM, via castLabs' Electron for Content Security.
 - **English and German:** the language follows your system and can be changed in Settings. Pages in other languages get a translate button (translation by Google).
-- **Everyday tools:** picture in picture that starts by itself when you switch away from a playing video, links to highlighted text, history, recently closed tabs and windows, bookmarks with import and export, a download manager, find in page, zoom, full-page screenshots, a PDF viewer, spell check, session restore and a notes panel.
+- **Everyday tools:** picture in picture that starts by itself when you switch away from a playing video, links to highlighted text, a QR code to open the page on your phone, history, recently closed tabs and windows, bookmarks with import and export, a download manager, find in page, zoom, full-page screenshots, a PDF viewer, spell check, session restore and a notes panel.
 
 <p align="center">
   <img src="docs/screenshots/settings-dark.png" width="430" alt="Settings in dark mode">

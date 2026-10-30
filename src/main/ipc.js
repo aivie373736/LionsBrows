@@ -1,6 +1,6 @@
 'use strict';
 
-const { ipcMain } = require('electron');
+const { ipcMain, clipboard } = require('electron');
 const { ctx } = require('./context');
 const menus = require('./menus');
 const palette = require('./palette');
@@ -120,6 +120,10 @@ const BUBBLE = {
     await Promise.all(cookies.map((c) => ses.cookies.remove(`http${c.secure ? 's' : ''}://${c.domain.replace(/^\./, '')}${c.path}`, c.name).catch(() => {})));
     await ses.clearStorageData({ origin, storages: ['localstorage', 'indexdb', 'websql', 'serviceworkers', 'cachestorage', 'filesystem'] }).catch(() => {});
     return true;
+  },
+  qrCopy: (w) => {
+    const url = w.activeTab()?.displayUrl;
+    if (url) clipboard.writeText(url);
   },
   siteReload: (w) => {
     w.activeTab()?.reload();

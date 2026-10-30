@@ -731,6 +731,20 @@ await step('the site panel shows the connection and changes permissions for the 
   await until(() => main((ctx, r, w) => !w.bubbleOpen), 'panel closed');
 });
 
+await step('a QR code opens the page on a phone', async () => {
+  await main((ctx, r, w) => r('./actions').run('qrCode', w));
+  const bubble = await pageFor(app, (u) => u.includes('/ui/bubble.html'));
+  await until(() => bubble.isVisible('#qr'), 'QR panel');
+  assert.equal(await bubble.textContent('#qr-url'), `${BASE}/two`);
+  assert.ok((await bubble.$$('#qr-code svg path')).length > 0);
+  await wait(200);
+  shot('16d-qr-code');
+  await bubble.click('#qr-copy');
+  await until(async () => (await app.evaluate(({ clipboard }) => clipboard.readText())) === `${BASE}/two`, 'link copied');
+  await bubble.click('#qr-close');
+  await until(() => main((ctx, r, w) => !w.bubbleOpen), 'panel closed');
+});
+
 await step('extensions install from a signed package, sit in the toolbar and open their popup', async () => {
   await main((ctx, r, w, a) => r('./extensions').installFromStore(a.id, a.url), { id: ROAR.id, url: `${BASE}/roar.crx` });
   const ui = await pageFor(app, (u) => u.includes('/ui/index.html'));

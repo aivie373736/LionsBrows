@@ -25,6 +25,7 @@
     "electron-chrome-extensions": "^4.10.0",
     "electron-updater": "^6.8.11",
     "fflate": "^0.8.3",
+    "qrcode-generator": "^2.0.4",
     "tldts": "^7.4.19"
   },
   "devDependencies": {

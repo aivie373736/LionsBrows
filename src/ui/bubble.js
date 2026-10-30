@@ -4,6 +4,8 @@ const $ = (sel) => document.querySelector(sel);
 const send = (name, ...args) => window.lions.bubble(name, ...args);
 const card = $('#card');
 const site = $('#site');
+const qr = $('#qr');
+const cards = [card, site, qr];
 const username = $('#username');
 const password = $('#password');
 const PERMISSIONS = [
@@ -21,7 +23,7 @@ function onAccent(hex) {
 }
 
 function visibleCard() {
-  return site.hidden ? card : site;
+  return cards.find((c) => !c.hidden) || card;
 }
 
 function reportSize() {
@@ -111,6 +113,24 @@ function showPassword(opts) {
   return card;
 }
 
+$('#qr-lead').innerHTML = icon('qr-code', 16);
+$('#qr-close').innerHTML = icon('x', 16);
+$('#qr-close').onclick = () => send('close');
+$('#qr-copy').onclick = async () => {
+  await send('qrCopy');
+  $('#qr-copy').textContent = tr('Copied');
+};
+
+function showQr(opts) {
+  const box = $('#qr-code');
+  box.classList.toggle('empty', !opts.svg);
+  if (opts.svg) box.innerHTML = opts.svg;
+  else box.textContent = tr('This link is too long for a QR code.');
+  $('#qr-url').textContent = opts.url;
+  $('#qr-copy').textContent = tr('Copy link');
+  return qr;
+}
+
 function showSite(opts) {
   $('#site-title').textContent = opts.host;
   $('#site-title').title = opts.host;
@@ -134,13 +154,12 @@ window.lions.on('bubble:show', (opts) => {
     root.style.setProperty('--accent-base', opts.accent);
     root.style.setProperty('--on-accent-base', onAccent(opts.accent));
   }
-  const shown = opts.kind === 'site' ? showSite(opts) : showPassword(opts);
-  card.hidden = shown !== card;
-  site.hidden = shown !== site;
+  const shown = opts.kind === 'site' ? showSite(opts) : opts.kind === 'qr' ? showQr(opts) : showPassword(opts);
+  for (const c of cards) c.hidden = c !== shown;
   shown.style.animation = 'none';
   void shown.offsetWidth;
   shown.style.animation = '';
   reportSize();
   if (shown === card) $('#primary').focus();
-  else $('#site-close').focus();
+  else shown.querySelector('.icon-btn').focus();
 });

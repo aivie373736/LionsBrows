@@ -133,6 +133,7 @@ function pageMenu(tab, params) {
         : translate.translatable(tab.displayUrl)
           ? { label: tr('Translate to {language}', { language: translate.NAMES[target] }), click: () => tab.navigate(translate.proxyUrl(tab.displayUrl, target)) }
           : null,
+      /^https?:/.test(tab.displayUrl) ? { label: tr('Create QR code for this page'), click: () => w.showQrBubble() } : null,
     );
     t.push(
       { label: tr('Back'), enabled: h.canGoBack(), click: () => tab.back() },

@@ -699,4 +699,8 @@
   'Translate to {language}': 'Auf {language} übersetzen',
   'Offer to translate pages': 'Übersetzung von Seiten anbieten',
   'Shows a translate button when a page is in another language. Pages are translated by Google.': 'Zeigt einen Übersetzen-Knopf, wenn eine Seite in einer anderen Sprache ist. Übersetzt wird von Google.',
+  'Scan with your phone': 'Mit dem Handy scannen',
+  'Create QR code for this page': 'QR-Code für diese Seite erstellen',
+  'This link is too long for a QR code.': 'Dieser Link ist zu lang für einen QR-Code.',
+  'Copied': 'Kopiert',
 });

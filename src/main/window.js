@@ -16,6 +16,7 @@ const OVERLAY_HTML = path.join(__dirname, '..', 'ui', 'overlay.html');
 const BUBBLE_HTML = path.join(__dirname, '..', 'ui', 'bubble.html');
 const BUBBLE_W = 388;
 const SITE_W = 392;
+const QR_W = 320;
 const ICON = path.join(__dirname, '..', 'shared', 'icon.png');
 
 const VERTICAL = { toolbar: 48, sidebar: 252, sidebarCollapsed: 60, panel: 340, find: 44, gap: 8, radius: 8 };
@@ -600,7 +601,7 @@ class BrowserWin {
       }
       const anchor = this.addressAnchor || { right: width - 8, bottom: this.lastArea.y };
       const site = this.bubbleKind === 'site' && this.siteAnchor;
-      const w = site ? SITE_W : BUBBLE_W;
+      const w = site ? SITE_W : this.bubbleKind === 'qr' ? QR_W : BUBBLE_W;
       const x = Math.max(8, Math.min(width - w - 8, site ? this.siteAnchor.x - 16 : anchor.right - w + 12));
       const y = (site ? this.siteAnchor.bottom : anchor.bottom) + 2;
       this.bubble.setBounds({ x, y, width: w, height: Math.min(this.bubbleHeight, height - y - 8) });
@@ -627,7 +628,8 @@ class BrowserWin {
       }
     });
     this.bubble.webContents.on('blur', () => {
-      if (this.bubbleOpen && this.bubbleKind === 'site') setTimeout(() => this.bubbleKind === 'site' && !this.bubble.webContents.isFocused() && this.hideBubble(false), 120);
+      const transient = () => this.bubbleKind === 'site' || this.bubbleKind === 'qr';
+      if (this.bubbleOpen && transient()) setTimeout(() => transient() && !this.bubble.webContents.isFocused() && this.hideBubble(false), 120);
     });
     return this.bubbleReady;
   }
@@ -640,6 +642,18 @@ class BrowserWin {
     this.bubbleKind = kind;
     this.bubbleTab = tab.id;
     this.layout();
+  }
+
+  async showQrBubble() {
+    const tab = this.activeTab();
+    const url = tab?.wc ? tab.displayUrl : '';
+    if (!/^https?:/.test(url)) return;
+    await this.#ensureBubble();
+    if (this.win.isDestroyed() || this.activeTab() !== tab) return;
+    this.#openBubble(tab, 'qr');
+    this.bubble.webContents.send('bubble:show', { kind: 'qr', url, svg: require('./qr').svg(url), accent: ctx.accentColor(), dark: nativeTheme.shouldUseDarkColors, isPrivate: this.isPrivate });
+    this.bubble.webContents.focus();
+    this.scheduleState();
   }
 
   async showSiteBubble(rect = {}) {

@@ -216,6 +216,40 @@ h2 {
 .button:disabled {
   opacity: 0.55;
 }
+.qr-code {
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+}
+.qr-code svg {
+  display: block;
+  width: 220px;
+  height: 220px;
+}
+.qr-code.empty {
+  padding: 24px 16px;
+  color: #55535e;
+  font-size: 13px;
+  text-align: center;
+}
+.qr-url {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  text-align: center;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#qr footer {
+  justify-content: center;
+}
+
 #site footer {
   justify-content: space-between;
 }

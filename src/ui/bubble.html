@@ -55,6 +55,18 @@
         <button class="button primary" id="site-reload" type="button" hidden>Reload to apply</button>
       </footer>
     </div>
+    <div id="qr" class="card" role="dialog" aria-labelledby="qr-title" hidden>
+      <header>
+        <span class="lead" id="qr-lead"></span>
+        <h1 id="qr-title">Scan with your phone</h1>
+        <button class="icon-btn" id="qr-close" title="Close" aria-label="Close"></button>
+      </header>
+      <div class="qr-code" id="qr-code"></div>
+      <div class="qr-url" id="qr-url"></div>
+      <footer>
+        <button class="button" id="qr-copy" type="button">Copy link</button>
+      </footer>
+    </div>
     <script src="../shared/icons.js"></script>
     <script src="../shared/locales/de.js"></script>
     <script src="../shared/i18n.js"></script>

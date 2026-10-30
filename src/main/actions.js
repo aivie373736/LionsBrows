@@ -122,6 +122,7 @@ const ACTIONS = {
 
   find: { title: 'Find in page', keys: ['mod+f'], run: (w) => w.openFind() },
   pictureInPicture: { title: 'Picture in picture', run: (w) => require('./media').togglePip(w.activeTab()) },
+  qrCode: { title: 'Create QR code for this page', run: (w) => w.showQrBubble() },
   reader: { title: 'Reader view', keys: ['mod+alt+r', 'f9'], run: (w) => require('./reader').toggle(w.activeTab()) },
   findNext: { title: 'Find next', keys: ['mod+g', 'f3'], hidden: true, run: (w) => w.find.open && w.findText(w.find.query, { next: true }) },
   findPrev: { title: 'Find previous', keys: ['mod+shift+g', 'shift+f3'], hidden: true, run: (w) => w.find.open && w.findText(w.find.query, { next: true, forward: false }) },
