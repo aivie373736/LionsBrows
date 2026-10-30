@@ -905,7 +905,7 @@ class BrowserWin {
     setImmediate(() => {
       this.statePending = false;
       const wc = liveContents(this.ui);
-      if (!wc || this.win.isDestroyed()) return;
+      if (!wc || this.win.isDestroyed() || ctx.quitting) return;
       const state = this.state();
       wc.send('ui:state', state);
       const title = state.nav?.title ? `${state.nav.title} - LionsBrows` : 'LionsBrows';
