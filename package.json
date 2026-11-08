@@ -77,6 +77,8 @@
       "include": "build/installer.nsh"
     },
     "mac": {
+      "identity": "-",
+      "hardenedRuntime": false,
       "target": [
         {
           "target": "dmg",
